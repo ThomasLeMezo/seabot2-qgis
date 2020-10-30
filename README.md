@@ -1,0 +1,1 @@
+# seabot2-qgis
