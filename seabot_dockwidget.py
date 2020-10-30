@@ -57,7 +57,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         # print(self.__dir__)
         self.setupUi(self)
-        
+
         self.timer_seabot = QTimer()
         self.timer_boat = QTimer()
         self.timer_mission = QTimer()
@@ -184,7 +184,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 self.comboBox_state_imei.addItem(robot["name"] + " (" + str(robot["imei"]) + ")", robot["imei"])
             else:
                 self.comboBox_state_imei.addItem(str(robot["imei"]), robot["imei"])
-        
+
         if index_comboBox==-1:
             self.comboBox_state_imei.setCurrentIndex(len(robot_list)-1)
         else:
@@ -291,7 +291,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         elif nb_digit==0:
             text = int(round(float(text)))
 
-        item = QTreeWidgetItem([str(val1), str(text)])   
+        item = QTreeWidgetItem([str(val1), str(text)])
         self.treeWidget_iridium.addTopLevelItem(item)
 
     def fill_treeWidget_log_state(self):
@@ -355,23 +355,23 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.layerBoat.stop()
 
     def server_connect(self):
-        self.pushButton_server_connect.setStyleSheet("background-color: red")
+        # self.pushButton_server_connect.setStyleSheet("background-color: red")
         if(self.pushButton_server_connect.isChecked()):
             self.set_enable_form_connect(False)
             self.imapServer.set_server_id(self.comboBox_config_email.currentData())
-            
+
             ## Thread IMAP
             self.imapServer.start_server()
-            
+
             ## UI update
             self.timer_IMAP.start()
         else:
-
             self.set_enable_form_connect(True)
             self.label_server_log.setText("Disconnected")
             ## Thread IMAP
             self.imapServer.stop_server()
             self.timer_IMAP.stop()
+            self.pushButton_server_connect.setStyleSheet("background-color: rgb(251, 251, 251)")
 
     def next_log_state(self):
         data = self.db.get_next_log_state(self.data_log["message_id"])
@@ -397,7 +397,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def update_state_imei(self):
         if(self.comboBox_state_imei.currentIndex() != -1):
             self.data_log, self.momsn_current = self.db.get_last_log_state(self.comboBox_state_imei.currentData())
-            
+
             self.fill_treeWidget_log_state()
             self.update_momsn_bounds()
             self.update_state_info()
@@ -442,7 +442,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.pushButton_server_connect.setStyleSheet("background-color: green")
         else:
             self.pushButton_server_connect.setStyleSheet("background-color: red")
-    
+
     def process_mission(self):
         if(len(self.layerMissions)>0):
             for layerMission in self.layerMissions:

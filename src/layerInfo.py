@@ -90,7 +90,7 @@ class LayerInfo():
 
             prop=QgsProperty()
             prop.setField("gnss_heading")
-            marker.setDataDefinedAngle(prop) #QgsProperty () 
+            marker.setDataDefinedAngle(prop) #QgsProperty ()
 
             renderer = QgsSingleSymbolRenderer(marker)
             layer.setRenderer(renderer)
@@ -106,7 +106,7 @@ class LayerInfo():
             # Data
             pr = layer.dataProvider()
             for feature in layer.getFeatures():
-                pr.changeFeatures({feature.id():{0:self.layer_name,1:data["gnss_heading"]}}, {feature.id():QgsGeometry.fromPointXY(point)})
+                pr.changeFeatures({feature.id():{0:self.message_id,1:data["gnss_heading"]}}, {feature.id():QgsGeometry.fromPointXY(point)})
                 layer.triggerRepaint()
                 break
 

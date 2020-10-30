@@ -27,7 +27,7 @@ class LayerSeabot():
 
         self.fields.append(QgsField('Title', QVariant.String))
         self.fields.append(QgsField('gnss_heading', QVariant.Double))
-        self.fields.append(QgsField('sec_since_received', QVariant.Double))
+        self.fields.append(QgsField('sec_since_received', QVariant.String))
 
         self.imei = imei
         if(name !=None):
@@ -57,7 +57,7 @@ class LayerSeabot():
         layer_list = QgsProject.instance().mapLayersByName(self.layer_track)
         if(len(layer_list)!=0):
             QgsProject.instance().removeMapLayer(layer_list[0])
-        
+
         # Build list of points
         list_pose = self.db.get_pose(self.imei)
         if(len(list_pose)==0):
@@ -126,7 +126,7 @@ class LayerSeabot():
             feature.setFields(self.fields)
             feature['Title'] = self.layer_pose
             feature['gnss_heading'] = data["gnss_heading"]
-            feature['sec_since_received'] = -1
+            feature['sec_since_received'] = "N/A"
 
             pr.addFeatures([feature])
 
@@ -142,7 +142,7 @@ class LayerSeabot():
 
             prop=QgsProperty()
             prop.setField("gnss_heading")
-            marker.setDataDefinedAngle(prop) #QgsProperty () 
+            marker.setDataDefinedAngle(prop) #QgsProperty ()
 
             renderer = QgsSingleSymbolRenderer(marker)
             layer.setRenderer(renderer)

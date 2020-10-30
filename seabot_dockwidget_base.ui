@@ -78,7 +78,7 @@
        <bool>false</bool>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <property name="elideMode">
        <enum>Qt::ElideNone</enum>
@@ -301,7 +301,7 @@
          <widget class="QDateTimeEdit" name="dateTimeEdit_last_sync">
           <property name="dateTime">
            <datetime>
-            <hour>12</hour>
+            <hour>11</hour>
             <minute>0</minute>
             <second>0</second>
             <year>2018</year>
@@ -311,7 +311,7 @@
           </property>
           <property name="minimumDateTime">
            <datetime>
-            <hour>10</hour>
+            <hour>9</hour>
             <minute>0</minute>
             <second>0</second>
             <year>2014</year>
@@ -339,6 +339,14 @@
         </item>
         <item row="16" column="0" colspan="2">
          <widget class="QPushButton" name="pushButton_server_connect">
+          <property name="autoFillBackground">
+           <bool>false</bool>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QPushButton:disabled {
+    background-color: rgb(170, 170, 127)
+}</string>
+          </property>
           <property name="text">
            <string>Connect</string>
           </property>
@@ -792,7 +800,7 @@
                </datetime>
               </property>
               <property name="currentSection">
-               <enum>QDateTimeEdit::SecondSection</enum>
+               <enum>QDateTimeEdit::MinuteSection</enum>
               </property>
               <property name="displayFormat">
                <string>mm:ss</string>
