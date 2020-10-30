@@ -1,0 +1,9 @@
+# Database
+*.db
+
+# Python
+*.pyc
+*.pyo
+__pycache__
+*.so
+*.o
