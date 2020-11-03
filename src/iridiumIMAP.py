@@ -29,7 +29,7 @@ from .database import *
 class ImapServer(QObject):
 	socket.setdefaulttimeout(1)
 	imap_signal = pyqtSignal()
-	
+
 	def __init__(self):
 		super().__init__()
 		self.serverIMAP = None
@@ -64,7 +64,7 @@ class ImapServer(QObject):
 			self.running = False
 		if(self.thread != None):
 			self.thread.join()
-		
+
 	def close_server(self):
 		if self.is_connected == True:
 			self.is_connected = False
@@ -74,7 +74,7 @@ class ImapServer(QObject):
 				self.serverIMAP.logout()
 			except imaplib.IMAP4.error as err:
 				print(err, flush=True)
- 
+
 	def update_imap(self):
 		self.db = DataBaseConnection(init_table=True)
 		while self.running:
@@ -110,7 +110,7 @@ class ImapServer(QObject):
 				raise Exception('Failed to select')
 
 			return True
-			
+
 		except imaplib.IMAP4.error as err:
 			print("Error imap ", err)
 			self.log = "Error IMAP"
@@ -210,8 +210,9 @@ class ImapServer(QObject):
 
 		if(mail["From"]=="sbdservice@sbd.iridium.com"):
 			# imei = mail["Subject"].split(": ")[1]
-			imei = re.search("SBD Msg From Unit: (.*)",mail["Subject"]).group(1)			
-			send_time = calendar.timegm(parsedate(mail["Date"]))
+			print(mail["Subject"])
+			imei = re.search("SBD (.*): (.*)",mail["Subject"]).group(2)
+			time_connection = calendar.timegm(parsedate(mail["Date"]))
 
 			# Check timed received
 			mail_datetime = QDateTime.fromString(mail["Date"], Qt.RFC2822Date)
@@ -228,15 +229,16 @@ class ImapServer(QObject):
 			for part in mail.iter_attachments():
 				if part.get_content_maintype() == 'application':
 					# Extract momsn from attached file
+					print(part.get_filename())
 					momsn = int(re.search("_(.*)\.", part.get_filename()).group(1))
-					
+
 					# Add new entry to the database with the association of the imei and momsn
-					message_id = self.db.add_sbd_received(imei, momsn)
+					message_id = self.db.add_sbd_received(imei, momsn, time_connection)
 
 					# Test if message is already saved
 					if(message_id != None):
 						msg_data = part.get_payload(decode=True)
-						IridiumMessageParser(msg_data, self.db, message_id, send_time)
+						IridiumMessageParser(msg_data, self.db, message_id, time_connection)
 		return True
 
 	def get_log(self):
@@ -274,7 +276,7 @@ class IridiumMessageParser():
 	def deserialize_log_state(self, data, send_time):
 		bit_position = 0
 		fields = {}
-		
+
 		# To be updated
 		message_type, bit_position = self.deserialize_data(data, 4, bit_position)
 		time_day_LQ, bit_position = self.deserialize_data(data, 14, bit_position)

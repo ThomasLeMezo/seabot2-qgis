@@ -6,7 +6,7 @@ from PyQt5.QtCore import QDate, QTime, QDateTime, Qt
 
 ## Database connection to store parameters and sbd messages
 class DataBaseConnection():
-	
+
 	db_file = expanduser("~") + "/.local/share/QGIS/QGIS3/profiles/default/python/plugins/seabot/" + "Seabot_iridium.db"
 
 	sqlite_tables_name = ["ROBOTS", "SBD_LOG_STATE", "CONFIG", "SBD_RECEIVED"]
@@ -54,6 +54,7 @@ class DataBaseConnection():
 									`message_id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 									`IMEI`	NUMERIC NOT NULL,
 									`momsn`	NUMERIC NOT NULL,
+									`time_connection` DATETIME NOT NULL,
 									FOREIGN KEY(`IMEI`) REFERENCES ROBOTS (`IMEI`)
 							)'''
 							]
@@ -69,7 +70,7 @@ class DataBaseConnection():
 
 		# Connection to DB to store iridium messages
 		try:
-			self.sqliteConnection = sqlite3.connect(self.db_file, 
+			self.sqliteConnection = sqlite3.connect(self.db_file,
 													detect_types=sqlite3.PARSE_DECLTYPES |
 																 sqlite3.PARSE_COLNAMES)
 			self.sqliteCursor = self.sqliteConnection.cursor()
@@ -83,7 +84,7 @@ class DataBaseConnection():
 				list_table_name = []
 				for name in records:
 					list_table_name.append(name[0])
-				
+
 				# Test if the table exists, otherwise add a new table
 				for i in range(len(self.sqlite_tables_name)):
 					if(self.sqlite_tables_name[i] not in list_table_name):
@@ -145,10 +146,10 @@ class DataBaseConnection():
 	def new_server(self, email, password, server_ip, server_port, t_zero = datetime.datetime.fromtimestamp(0)):
 		try:
 			sqlite_insert_config = '''INSERT INTO CONFIG
-						  (email, password, server_ip, server_port, last_sync) 
+						  (email, password, server_ip, server_port, last_sync)
 						  VALUES (?, ?, ?, ?, ?);'''
 
-			data_tuple = (email, password, server_ip, server_port, t_zero) 
+			data_tuple = (email, password, server_ip, server_port, t_zero)
 			self.sqliteCursor.execute(sqlite_insert_config, data_tuple)
 			self.sqliteConnection.commit()
 			return True
@@ -162,7 +163,7 @@ class DataBaseConnection():
 						  email= ?, password=?, server_ip=?, server_port=?, last_sync=?
 						  WHERE config_id = ?'''
 
-			data_tuple = (email, password, server_ip, server_port, t_zero, config_id) 
+			data_tuple = (email, password, server_ip, server_port, t_zero, config_id)
 			self.sqliteCursor.execute(sqlite_insert_config, data_tuple)
 			self.sqliteConnection.commit()
 			return True
@@ -227,12 +228,12 @@ class DataBaseConnection():
 		except sqlite3.Error as error:
 			print("Error while connecting to sqlite", error)
 
-	def add_sbd_received(self, imei, momsn):
+	def add_sbd_received(self, imei, momsn, time_connection):
 		try:
-			self.sqliteCursor.execute("SELECT COUNT(1) from SBD_RECEIVED WHERE IMEI= ? and momsn=?", [imei, momsn])
+			self.sqliteCursor.execute("SELECT COUNT(1) from SBD_RECEIVED WHERE IMEI= ? and momsn=? and time_connection=?", [imei, momsn,time_connection])
 			row = self.sqliteCursor.fetchone()
 			if(row[0]==0):
-				self.sqliteCursor.execute("INSERT INTO SBD_RECEIVED (IMEI, momsn) VALUES (?, ?)", [imei, momsn])
+				self.sqliteCursor.execute("INSERT INTO SBD_RECEIVED (IMEI, momsn, time_connection) VALUES (?, ?, ?)", [imei, momsn, time_connection])
 				self.sqliteConnection.commit()
 				return self.sqliteCursor.lastrowid
 			else:
@@ -271,9 +272,9 @@ class DataBaseConnection():
 	def get_next_log_state(self, message_id):
 		try:
 			sql_sentence = '''SELECT *
-								FROM SBD_LOG_STATE 
+								FROM SBD_LOG_STATE
 								INNER JOIN SBD_RECEIVED ON (
-									SBD_LOG_STATE.message_id = SBD_RECEIVED.message_id 
+									SBD_LOG_STATE.message_id = SBD_RECEIVED.message_id
 									AND
 									SBD_RECEIVED.IMEI IN (SELECT SBD_RECEIVED.IMEI FROM SBD_RECEIVED WHERE SBD_RECEIVED.message_id=?)
 									AND
@@ -293,9 +294,9 @@ class DataBaseConnection():
 	def get_previous_log_state(self, message_id):
 		try:
 			sql_sentence = '''SELECT *
-								FROM SBD_LOG_STATE 
+								FROM SBD_LOG_STATE
 								INNER JOIN SBD_RECEIVED ON (
-									SBD_LOG_STATE.message_id = SBD_RECEIVED.message_id 
+									SBD_LOG_STATE.message_id = SBD_RECEIVED.message_id
 									AND
 									SBD_RECEIVED.IMEI IN (SELECT SBD_RECEIVED.IMEI FROM SBD_RECEIVED WHERE SBD_RECEIVED.message_id=?)
 									AND
@@ -314,7 +315,7 @@ class DataBaseConnection():
 
 	def get_momsn_from_message_id(self, message_id):
 		try:
-			sql_sentence = '''SELECT SBD_RECEIVED.MOMSN FROM SBD_RECEIVED 
+			sql_sentence = '''SELECT SBD_RECEIVED.MOMSN FROM SBD_RECEIVED
 								WHERE SBD_RECEIVED.message_id = ? '''
 			self.sqliteCursor.execute(sql_sentence, [message_id])
 			row = self.sqliteCursor.fetchone()
@@ -328,7 +329,7 @@ class DataBaseConnection():
 	def get_log_state(self, message_id):
 		try:
 			sql_sentence = '''SELECT *
-								FROM SBD_LOG_STATE 
+								FROM SBD_LOG_STATE
 								WHERE SBD_LOG_STATE.message_id = ?
 								LIMIT 1'''
 			self.sqliteCursor.execute(sql_sentence, [message_id])
@@ -343,9 +344,9 @@ class DataBaseConnection():
 	def get_last_log_state(self, imei):
 		try:
 			sql_sentence = '''SELECT *, SBD_RECEIVED.MOMSN
-							FROM SBD_LOG_STATE 
+							FROM SBD_LOG_STATE
 							INNER JOIN SBD_RECEIVED ON (
-								SBD_LOG_STATE.message_id = SBD_RECEIVED.message_id 
+								SBD_LOG_STATE.message_id = SBD_RECEIVED.message_id
 								AND
 								SBD_RECEIVED.IMEI = ?
 							)
@@ -363,7 +364,7 @@ class DataBaseConnection():
 	def get_last_log_state_momsn(self, imei, momsn):
 		try:
 			sql_sentence = '''SELECT *
-							FROM SBD_LOG_STATE 
+							FROM SBD_LOG_STATE
 							INNER JOIN SBD_RECEIVED ON (
 								SBD_RECEIVED.MOMSN = ?
 								AND
@@ -382,7 +383,7 @@ class DataBaseConnection():
 	def get_pose(self, imei):
 		try:
 			sql_sentence = '''SELECT SBD_LOG_STATE.east, SBD_LOG_STATE.north
-							FROM SBD_LOG_STATE 
+							FROM SBD_LOG_STATE
 							INNER JOIN SBD_RECEIVED ON (
 								SBD_RECEIVED.IMEI = ?
 								AND
@@ -398,7 +399,7 @@ class DataBaseConnection():
 	def get_last_pose(self, imei):
 		try:
 			sql_sentence = '''SELECT SBD_LOG_STATE.east, SBD_LOG_STATE.north
-							FROM SBD_LOG_STATE 
+							FROM SBD_LOG_STATE
 							INNER JOIN SBD_RECEIVED ON (
 								SBD_RECEIVED.IMEI = ?
 								AND
@@ -415,7 +416,7 @@ class DataBaseConnection():
 	def get_name(self, imei):
 		try:
 			sql_sentence = '''SELECT ROBOTS.name
-							FROM SBD_LOG_STATE 
+							FROM SBD_LOG_STATE
 							WHERE ROBOTS.imei = ?'''
 			self.sqliteCursor.execute(sql_sentence, [imei])
 			row = self.sqliteCursor.fetchone()
@@ -436,7 +437,7 @@ class DataBaseConnection():
 
 	def add_sbd_log_state(self, message_id, data):
 		try:
-			sql_insert_log_state = ''' INSERT INTO SBD_LOG_STATE 
+			sql_insert_log_state = ''' INSERT INTO SBD_LOG_STATE
 			(message_id,
 			 ts,
 			 east,
@@ -459,31 +460,31 @@ class DataBaseConnection():
 			 temperature,
 			 humidity,
 			 waypoint,
-			 last_cmd_received) 
+			 last_cmd_received)
 			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'''
 
 			seq = [message_id,
-					data["ts"], 
-					data["east"], 
-					data["north"], 
-					data["gnss_speed"], 
-					data["gnss_heading"], 
-					data["safety_published_frequency"], 
-					data["safety_depth_limit"], 
-					data["safety_batteries_limit"], 
-					data["safety_depressurization"], 
-					data["enable_mission"], 
-					data["enable_depth"], 
-					data["enable_engine"], 
-					data["enable_flash"], 
-					data["battery0"], 
-					data["battery1"], 
-					data["battery2"], 
-					data["battery3"], 
-					data["pressure"], 
-					data["temperature"], 
-					data["humidity"], 
-					data["waypoint"], 
+					data["ts"],
+					data["east"],
+					data["north"],
+					data["gnss_speed"],
+					data["gnss_heading"],
+					data["safety_published_frequency"],
+					data["safety_depth_limit"],
+					data["safety_batteries_limit"],
+					data["safety_depressurization"],
+					data["enable_mission"],
+					data["enable_depth"],
+					data["enable_engine"],
+					data["enable_flash"],
+					data["battery0"],
+					data["battery1"],
+					data["battery2"],
+					data["battery3"],
+					data["pressure"],
+					data["temperature"],
+					data["humidity"],
+					data["waypoint"],
 					data["last_cmd_received"]]
 
 			self.sqliteCursor.execute(sql_insert_log_state, seq)

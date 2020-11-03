@@ -209,7 +209,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 self.update_robots_list(currentIndex)
                 self.layerSeabots[self.comboBox_state_imei.currentData()].name = text
 
-    def select_server(self, index):
+    def select_server(self, index=0):
         if index != -1:
             server_id = self.comboBox_config_email.currentData()
             server_data = self.db.get_server_data(server_id)
@@ -372,6 +372,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.imapServer.stop_server()
             self.timer_IMAP.stop()
             self.pushButton_server_connect.setStyleSheet("background-color: rgb(251, 251, 251)")
+            self.select_server()
 
     def next_log_state(self):
         data = self.db.get_next_log_state(self.data_log["message_id"])
