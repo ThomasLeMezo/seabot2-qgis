@@ -97,9 +97,9 @@ class LayerSeabot():
         return True
 
     def update_pose(self):
-        data = self.db.get_last_log_state(self.imei)[0]
+        data, momsn_current = self.db.get_last_log_state(self.imei)
         if(data==None):
-            return
+            return False
         point = QgsPointXY(float(data["east"]), float(data["north"]))
 
         ### ADD DATA TO LAYER ###

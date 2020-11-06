@@ -78,7 +78,7 @@
        <bool>false</bool>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>2</number>
       </property>
       <property name="elideMode">
        <enum>Qt::ElideNone</enum>
@@ -94,6 +94,102 @@
         <string>Config</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_5">
+        <item row="16" column="1">
+         <widget class="QPushButton" name="pushButton_server_save">
+          <property name="text">
+           <string>Update account</string>
+          </property>
+         </widget>
+        </item>
+        <item row="15" column="0" colspan="2">
+         <widget class="QDateTimeEdit" name="dateTimeEdit_last_sync">
+          <property name="dateTime">
+           <datetime>
+            <hour>10</hour>
+            <minute>0</minute>
+            <second>0</second>
+            <year>2018</year>
+            <month>12</month>
+            <day>31</day>
+           </datetime>
+          </property>
+          <property name="minimumDateTime">
+           <datetime>
+            <hour>8</hour>
+            <minute>0</minute>
+            <second>0</second>
+            <year>2014</year>
+            <month>12</month>
+            <day>31</day>
+           </datetime>
+          </property>
+          <property name="displayFormat">
+           <string>dd/MM/yyyy HH:mm:ss</string>
+          </property>
+          <property name="calendarPopup">
+           <bool>true</bool>
+          </property>
+          <property name="timeSpec">
+           <enum>Qt::UTC</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="10" column="0" colspan="2">
+         <widget class="QLineEdit" name="lineEdit_password">
+          <property name="inputMethodHints">
+           <set>Qt::ImhHiddenText|Qt::ImhNoAutoUppercase|Qt::ImhNoPredictiveText|Qt::ImhSensitiveData</set>
+          </property>
+          <property name="echoMode">
+           <enum>QLineEdit::Password</enum>
+          </property>
+          <property name="placeholderText">
+           <string>password</string>
+          </property>
+          <property name="clearButtonEnabled">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0" colspan="2">
+         <widget class="Line" name="line_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="12" column="0" colspan="2">
+         <widget class="QLineEdit" name="lineEdit_server_port">
+          <property name="placeholderText">
+           <string>server port</string>
+          </property>
+         </widget>
+        </item>
+        <item row="19" column="0" colspan="2">
+         <widget class="QLabel" name="label_server_log">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Disconnected</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0" colspan="2">
+         <widget class="QCheckBox" name="checkBox_gnss_delete">
+          <property name="text">
+           <string>Delete trajectory on exit</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
         <item row="1" column="0">
          <widget class="QPushButton" name="pushButton_boat">
           <property name="minimumSize">
@@ -110,48 +206,23 @@
           </property>
          </widget>
         </item>
-        <item row="8" column="0" colspan="2">
-         <widget class="QComboBox" name="comboBox_config_email"/>
-        </item>
-        <item row="4" column="0" colspan="2">
-         <widget class="QCheckBox" name="checkBox_gnss_delete">
-          <property name="text">
-           <string>Delete trajectory on exit</string>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="14" column="1">
-         <widget class="QPushButton" name="pushButton_server_save">
-          <property name="text">
-           <string>Save</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0" colspan="2">
-         <widget class="QCheckBox" name="checkBox_gnss_distance">
-          <property name="text">
-           <string>Show Distance and Heading to Seabot</string>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="0" colspan="2">
-         <widget class="QCheckBox" name="checkBox_gnss_lock">
-          <property name="enabled">
-           <bool>true</bool>
-          </property>
-          <property name="text">
-           <string>Lock Boat Position</string>
-          </property>
-          <property name="checked">
+        <item row="18" column="0" colspan="2">
+         <widget class="QPushButton" name="pushButton_server_connect">
+          <property name="autoFillBackground">
            <bool>false</bool>
           </property>
-          <property name="tristate">
+          <property name="styleSheet">
+           <string notr="true">QPushButton:disabled {
+    background-color: rgb(170, 170, 127)
+}</string>
+          </property>
+          <property name="text">
+           <string>Connect</string>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
+          <property name="checked">
            <bool>false</bool>
           </property>
          </widget>
@@ -178,22 +249,6 @@
           </property>
           <property name="text">
            <string>GNSS</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="6" column="0" colspan="2">
-         <widget class="QLabel" name="label">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>Email account</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignCenter</set>
@@ -234,10 +289,10 @@
           </property>
          </widget>
         </item>
-        <item row="14" column="0">
+        <item row="16" column="0">
          <widget class="QPushButton" name="pushButton_server_new">
           <property name="text">
-           <string>New</string>
+           <string>Save new account</string>
           </property>
          </widget>
         </item>
@@ -260,25 +315,28 @@
           </property>
          </widget>
         </item>
-        <item row="5" column="0" colspan="2">
-         <widget class="Line" name="line_2">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
+        <item row="3" column="0" colspan="2">
+         <widget class="QCheckBox" name="checkBox_gnss_distance">
+          <property name="text">
+           <string>Show Distance and Heading to Seabot</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
-        <item row="10" column="0" colspan="2">
-         <widget class="QLineEdit" name="lineEdit_password">
-          <property name="inputMethodHints">
-           <set>Qt::ImhHiddenText|Qt::ImhNoAutoUppercase|Qt::ImhNoPredictiveText|Qt::ImhSensitiveData</set>
+        <item row="2" column="0" colspan="2">
+         <widget class="QCheckBox" name="checkBox_gnss_lock">
+          <property name="enabled">
+           <bool>true</bool>
           </property>
-          <property name="echoMode">
-           <enum>QLineEdit::Password</enum>
+          <property name="text">
+           <string>Lock Boat Position</string>
           </property>
-          <property name="placeholderText">
-           <string>password</string>
+          <property name="checked">
+           <bool>false</bool>
           </property>
-          <property name="clearButtonEnabled">
+          <property name="tristate">
            <bool>false</bool>
           </property>
          </widget>
@@ -290,87 +348,42 @@
           </property>
          </widget>
         </item>
-        <item row="12" column="0" colspan="2">
-         <widget class="QLineEdit" name="lineEdit_server_port">
-          <property name="placeholderText">
-           <string>server port</string>
-          </property>
-         </widget>
-        </item>
-        <item row="13" column="0" colspan="2">
-         <widget class="QDateTimeEdit" name="dateTimeEdit_last_sync">
-          <property name="dateTime">
-           <datetime>
-            <hour>11</hour>
-            <minute>0</minute>
-            <second>0</second>
-            <year>2018</year>
-            <month>12</month>
-            <day>31</day>
-           </datetime>
-          </property>
-          <property name="minimumDateTime">
-           <datetime>
-            <hour>9</hour>
-            <minute>0</minute>
-            <second>0</second>
-            <year>2014</year>
-            <month>12</month>
-            <day>31</day>
-           </datetime>
-          </property>
-          <property name="displayFormat">
-           <string>dd/MM/yyyy HH:mm:ss</string>
-          </property>
-          <property name="calendarPopup">
-           <bool>true</bool>
-          </property>
-          <property name="timeSpec">
-           <enum>Qt::UTC</enum>
-          </property>
-         </widget>
-        </item>
-        <item row="15" column="0" colspan="2">
-         <widget class="QPushButton" name="pushButton_server_delete">
-          <property name="text">
-           <string>Delete</string>
-          </property>
-         </widget>
-        </item>
-        <item row="16" column="0" colspan="2">
-         <widget class="QPushButton" name="pushButton_server_connect">
-          <property name="autoFillBackground">
-           <bool>false</bool>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">QPushButton:disabled {
-    background-color: rgb(170, 170, 127)
-}</string>
-          </property>
-          <property name="text">
-           <string>Connect</string>
-          </property>
-          <property name="checkable">
-           <bool>true</bool>
-          </property>
-          <property name="checked">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="17" column="0" colspan="2">
-         <widget class="QLabel" name="label_server_log">
+        <item row="6" column="0" colspan="2">
+         <widget class="QLabel" name="label">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
           <property name="text">
-           <string>Disconnected</string>
+           <string>Email account</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="17" column="0" colspan="2">
+         <widget class="QPushButton" name="pushButton_server_delete">
+          <property name="text">
+           <string>Delete account</string>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="0" colspan="2">
+         <widget class="QComboBox" name="comboBox_config_email"/>
+        </item>
+        <item row="14" column="0" colspan="2">
+         <widget class="QLabel" name="label_22">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Synchronisation from</string>
           </property>
          </widget>
         </item>
@@ -640,41 +653,7 @@
         <string>State</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_4">
-        <item row="2" column="0">
-         <widget class="QPushButton" name="pushButton_state_previous">
-          <property name="text">
-           <string>Previous</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0" colspan="2">
-         <widget class="QLabel" name="label_state_info">
-          <property name="text">
-           <string>../..</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="1">
-         <widget class="QPushButton" name="pushButton_state_next">
-          <property name="text">
-           <string>Next</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="1">
-         <widget class="QPushButton" name="pushButton_state_last">
-          <property name="text">
-           <string>Last</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0" colspan="2">
-         <widget class="QComboBox" name="comboBox_state_imei"/>
-        </item>
-        <item row="4" column="0" colspan="2">
+        <item row="7" column="0" colspan="2">
          <widget class="QTreeWidget" name="treeWidget_iridium">
           <attribute name="headerDefaultSectionSize">
            <number>150</number>
@@ -686,10 +665,130 @@
           </column>
          </widget>
         </item>
-        <item row="5" column="1">
+        <item row="1" column="1">
+         <widget class="QDateTimeEdit" name="dateTimeEdit_state_view_start">
+          <property name="dateTime">
+           <datetime>
+            <hour>12</hour>
+            <minute>0</minute>
+            <second>0</second>
+            <year>2018</year>
+            <month>1</month>
+            <day>1</day>
+           </datetime>
+          </property>
+          <property name="displayFormat">
+           <string>dd/MM/yy h:mm:ss</string>
+          </property>
+          <property name="calendarPopup">
+           <bool>true</bool>
+          </property>
+          <property name="timeSpec">
+           <enum>Qt::UTC</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0">
+         <widget class="QPushButton" name="pushButton_state_previous">
+          <property name="text">
+           <string>Previous</string>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="1">
          <widget class="QPushButton" name="pushButton_state_rename">
           <property name="text">
            <string>Rename Robot</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0" colspan="2">
+         <widget class="QComboBox" name="comboBox_state_imei"/>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_20">
+          <property name="text">
+           <string>Display data from (UTC)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="1">
+         <widget class="QPushButton" name="pushButton_state_next">
+          <property name="text">
+           <string>Next</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="label_21">
+          <property name="text">
+           <string>Display data to (UTC)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="1">
+         <widget class="QPushButton" name="pushButton_state_last">
+          <property name="text">
+           <string>Last</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0" colspan="2">
+         <widget class="QLabel" name="label_state_info">
+          <property name="text">
+           <string>../..</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QCheckBox" name="checkBox_state_view_last_received">
+          <property name="text">
+           <string>Last received</string>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+          <property name="autoRepeat">
+           <bool>false</bool>
+          </property>
+          <property name="autoExclusive">
+           <bool>false</bool>
+          </property>
+          <property name="tristate">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="0">
+         <widget class="QPushButton" name="pushButton_errase_log">
+          <property name="text">
+           <string>Errase all robot log</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QDateTimeEdit" name="dateTimeEdit_state_view_end">
+          <property name="dateTime">
+           <datetime>
+            <hour>12</hour>
+            <minute>0</minute>
+            <second>0</second>
+            <year>2050</year>
+            <month>1</month>
+            <day>1</day>
+           </datetime>
+          </property>
+          <property name="displayFormat">
+           <string>dd/MM/yy h:mm:ss</string>
+          </property>
+          <property name="calendarPopup">
+           <bool>true</bool>
+          </property>
+          <property name="timeSpec">
+           <enum>Qt::UTC</enum>
           </property>
          </widget>
         </item>
@@ -721,7 +820,7 @@
            </sizepolicy>
           </property>
           <property name="currentIndex">
-           <number>2</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="tab_cmd_sleep">
            <property name="sizePolicy">

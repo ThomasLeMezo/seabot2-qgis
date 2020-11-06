@@ -13,6 +13,9 @@ class DataBaseConnection():
 	sqlite_create_table = ['''CREATE TABLE "'''+sqlite_tables_name[0]+'''" (
 										`IMEI`	NUMERIC NOT NULL,
 										`NAME`	TEXT,
+										`view_start_ts`	DATETIME DEFAULT `2018-01-01 00:00:00.000`,
+										`view_end_ts` DATETIME DEFAULT `2050-01-01 00:00:00.000`,
+										'view_last_received' BOOLEAN DEFAULT `1`,
 										PRIMARY KEY(IMEI)
 									)''',
 							'''CREATE TABLE "'''+sqlite_tables_name[1]+'''" (
@@ -357,7 +360,7 @@ class DataBaseConnection():
 			if(row!=None):
 				return self.fill_data_log_state(row[0:-2]), row[-1]
 			else:
-				return None
+				return [None, None]
 		except sqlite3.Error as error:
 			print("Error while connecting to sqlite", error)
 
@@ -424,6 +427,18 @@ class DataBaseConnection():
 		except sqlite3.Error as error:
 			print("Error while connecting to sqlite", error)
 
+	def errase_log(self, imei):
+		try:
+			self.sqliteCursor.execute("DELETE FROM SBD_RECEIVED WHERE IMEI=(?)", [imei])
+			self.sqliteConnection.commit()
+			self.sqliteCursor.execute("DELETE FROM SBD_RECEIVED WHERE IMEI=(?)", [imei])
+			self.sqliteConnection.commit()
+
+			return True
+		except sqlite3.Error as error:
+			print("Error while connecting to sqlite", error)
+			return False
+
 	def get_bounds_momsn(self, imei):
 		try:
 			sql_sentence = '''SELECT MIN(SBD_RECEIVED.momsn), MAX(SBD_RECEIVED.momsn)
@@ -434,6 +449,61 @@ class DataBaseConnection():
 			return data[0], data[1]
 		except sqlite3.Error as error:
 			print("Error while connecting to sqlite", error)
+
+	def set_view_end(self, datetime, imei):
+		try:
+			self.sqliteCursor.execute("UPDATE ROBOTS SET view_end_ts = ? WHERE imei=?", [datetime,imei])
+			self.sqliteConnection.commit()
+		except sqlite3.Error as error:
+			print("Error while connecting to sqlite", error)
+
+	def set_view_start(self, datetime, imei):
+		try:
+			self.sqliteCursor.execute("UPDATE ROBOTS SET view_start_ts = ? WHERE imei=?", [datetime,imei])
+			self.sqliteConnection.commit()
+		except sqlite3.Error as error:
+			print("Error while connecting to sqlite", error)
+
+	def set_view_last(self, val, imei):
+		try:
+			self.sqliteCursor.execute("UPDATE ROBOTS SET view_last_received = ? WHERE imei=?", [val,imei])
+			self.sqliteConnection.commit()
+		except sqlite3.Error as error:
+			print("Error while connecting to sqlite", error)
+
+	def get_view_end(self, imei):
+		try:
+			sql_sentence = '''SELECT view_end_ts
+							FROM ROBOTS
+							WHERE ROBOTS.imei = ?'''
+			self.sqliteCursor.execute(sql_sentence, [imei])
+			row = self.sqliteCursor.fetchone()
+			return row[0]
+		except sqlite3.Error as error:
+			print("Error while connecting to sqlite", error)
+
+	def get_view_start(self, imei):
+		try:
+			sql_sentence = '''SELECT view_start_ts
+							FROM ROBOTS
+							WHERE ROBOTS.imei = ?'''
+			self.sqliteCursor.execute(sql_sentence, [imei])
+			row = self.sqliteCursor.fetchone()
+			return row[0]
+		except sqlite3.Error as error:
+			print("Error while connecting to sqlite", error)
+
+	def get_view_last_received(self, imei):
+			try:
+				sql_sentence = '''SELECT view_last_received
+								FROM ROBOTS
+								WHERE ROBOTS.imei = ?'''
+				self.sqliteCursor.execute(sql_sentence, [imei])
+				row = self.sqliteCursor.fetchone()
+				return row[0]
+			except sqlite3.Error as error:
+				print("Error while connecting to sqlite", error)
+
 
 	def add_sbd_log_state(self, message_id, data):
 		try:

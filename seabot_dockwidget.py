@@ -68,6 +68,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.momsn_current = 0
 
         self.data_log = {}
+        self.is_data = False
 
         # Layers
         self.layerSeabots = {}
@@ -121,6 +122,8 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.checkBox_gnss_distance.stateChanged.connect(self.update_gnss_seabot_pose)
         self.checkBox_gnss_delete.stateChanged.connect(self.update_gnss_delete)
 
+        self.dateTimeEdit_last_sync.dateTimeChanged.connect(self.update_last_sync)
+
         # Mission tab
         self.pushButton_open_mission.clicked.connect(self.open_mission)
         self.pushButton_delete_mission.clicked.connect(self.delete_mission)
@@ -134,6 +137,11 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.pushButton_state_next.clicked.connect(self.next_log_state)
         self.pushButton_state_last.clicked.connect(self.last_log_state)
         self.comboBox_state_imei.currentIndexChanged.connect(self.update_state_imei)
+        self.pushButton_errase_log.clicked.connect(self.errase_log_robot)
+
+        self.checkBox_state_view_last_received.stateChanged.connect(self.update_sate_view_last_received)
+        self.dateTimeEdit_state_view_end.dateTimeChanged.connect(self.update_sate_view_end)
+        self.dateTimeEdit_state_view_start.dateTimeChanged.connect(self.update_sate_view_start)
 
         # Fill list of email account
         self.update_server_list()
@@ -296,39 +304,43 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def fill_treeWidget_log_state(self):
         self.treeWidget_iridium.clear()
-        self.add_item_treeWidget("message_id")
-        self.add_item_treeWidget("ts", datetime.datetime.fromtimestamp(self.data_log["ts"]))
-        self.add_item_treeWidget("east", nb_digit=0)
-        self.add_item_treeWidget("north", nb_digit=0)
-        self.add_item_treeWidget("gnss_speed", nb_digit=2)
-        self.add_item_treeWidget("gnss_heading", nb_digit=0)
-        self.add_item_treeWidget("safety_published_frequency", nb_digit=0)
-        self.add_item_treeWidget("safety_depth_limit", nb_digit=0)
-        self.add_item_treeWidget("safety_batteries_limit", nb_digit=0)
-        self.add_item_treeWidget("safety_depressurization", nb_digit=0)
-        self.add_item_treeWidget("enable_mission", nb_digit=0)
-        self.add_item_treeWidget("enable_depth", nb_digit=0)
-        self.add_item_treeWidget("enable_engine", nb_digit=0)
-        self.add_item_treeWidget("enable_flash", nb_digit=0)
-        self.add_item_treeWidget("battery0", nb_digit=2)
-        self.add_item_treeWidget("battery1", nb_digit=2)
-        self.add_item_treeWidget("battery2", nb_digit=2)
-        self.add_item_treeWidget("battery3", nb_digit=2)
-        self.add_item_treeWidget("pressure", nb_digit=0)
-        self.add_item_treeWidget("temperature", nb_digit=1)
-        self.add_item_treeWidget("humidity", nb_digit=2)
-        self.add_item_treeWidget("waypoint", nb_digit=0)
-        self.add_item_treeWidget("last_cmd_received")
+        if(self.data_log!=None):
+            self.add_item_treeWidget("message_id")
+            self.add_item_treeWidget("ts", datetime.datetime.fromtimestamp(self.data_log["ts"]))
+            self.add_item_treeWidget("east", nb_digit=0)
+            self.add_item_treeWidget("north", nb_digit=0)
+            self.add_item_treeWidget("gnss_speed", nb_digit=2)
+            self.add_item_treeWidget("gnss_heading", nb_digit=0)
+            self.add_item_treeWidget("safety_published_frequency", nb_digit=0)
+            self.add_item_treeWidget("safety_depth_limit", nb_digit=0)
+            self.add_item_treeWidget("safety_batteries_limit", nb_digit=0)
+            self.add_item_treeWidget("safety_depressurization", nb_digit=0)
+            self.add_item_treeWidget("enable_mission", nb_digit=0)
+            self.add_item_treeWidget("enable_depth", nb_digit=0)
+            self.add_item_treeWidget("enable_engine", nb_digit=0)
+            self.add_item_treeWidget("enable_flash", nb_digit=0)
+            self.add_item_treeWidget("battery0", nb_digit=2)
+            self.add_item_treeWidget("battery1", nb_digit=2)
+            self.add_item_treeWidget("battery2", nb_digit=2)
+            self.add_item_treeWidget("battery3", nb_digit=2)
+            self.add_item_treeWidget("pressure", nb_digit=0)
+            self.add_item_treeWidget("temperature", nb_digit=1)
+            self.add_item_treeWidget("humidity", nb_digit=2)
+            self.add_item_treeWidget("waypoint", nb_digit=0)
+            self.add_item_treeWidget("last_cmd_received")
 
     def update_state_info(self):
-        # Get current momsn
-        self.momsn_current = self.db.get_momsn_from_message_id(self.data_log["message_id"])
+        if(self.data_log!=None):
+            # Get current momsn
+            self.momsn_current = self.db.get_momsn_from_message_id(self.data_log["message_id"])
 
-        # Update Text
-        self.label_state_info.setText(str(self.momsn_current) + "/ [" + str(self.momsn_min) + ", " + str(self.momsn_max) + "]")
+            # Update Text
+            self.label_state_info.setText(str(self.momsn_current) + "/ [" + str(self.momsn_min) + ", " + str(self.momsn_max) + "]")
 
-        # Update view of log
-        self.layerInfo.update(self.data_log["message_id"])
+            # Update view of log
+            self.layerInfo.update(self.data_log["message_id"])
+        else:
+            self.label_state_info.setText("None/[None,None]")
 
     def update_momsn_bounds(self):
         self.momsn_min, self.momsn_max = self.db.get_bounds_momsn(self.comboBox_state_imei.currentData())
@@ -374,26 +386,69 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.pushButton_server_connect.setStyleSheet("background-color: rgb(251, 251, 251)")
             self.select_server()
 
+    def update_last_sync(self, datetime):
+        if(self.comboBox_config_email.currentIndex() != -1):
+            self.db.update_last_sync(self.comboBox_config_email.currentData(), datetime.toString(Qt.ISODate))
+
     def next_log_state(self):
-        data = self.db.get_next_log_state(self.data_log["message_id"])
-        if(data != None):
-            self.data_log = data
-            self.update_state_info()
-            self.fill_treeWidget_log_state()
+        if(self.data_log != None):
+            data = self.db.get_next_log_state(self.data_log["message_id"])
+            if(data != None):
+                self.data_log = data
+                self.update_state_info()
+                self.fill_treeWidget_log_state()
 
     def previous_log_state(self):
-        data = self.db.get_previous_log_state(self.data_log["message_id"])
-        if(data != None):
-            self.data_log = data
-            self.update_state_info()
-            self.fill_treeWidget_log_state()
+        if(self.data_log != None):
+            data = self.db.get_previous_log_state(self.data_log["message_id"])
+            if(data != None):
+                self.data_log = data
+                self.update_state_info()
+                self.fill_treeWidget_log_state()
+
+    def errase_log_robot(self):
+        if(self.comboBox_state_imei.currentIndex() != -1):
+            currentIndex = self.comboBox_state_imei.currentIndex()
+            self.db.errase_log(self.comboBox_state_imei.currentData())
 
     def last_log_state(self):
-        data, momsn_current = self.db.get_last_log_state(self.comboBox_state_imei.currentData())
-        if(data != None):
-            self.data_log = data
-            self.update_state_info()
-            self.fill_treeWidget_log_state()
+        self.data_log, self.momsn_current = self.db.get_last_log_state(self.comboBox_state_imei.currentData())
+        self.update_state_info()
+        self.fill_treeWidget_log_state()
+
+    def update_state_view(self):
+        if(self.comboBox_state_imei.currentIndex() != -1):
+            ts_end = self.db.get_view_end(self.comboBox_state_imei.currentData())
+            ts_start = self.db.get_view_start(self.comboBox_state_imei.currentData())
+            last_received = self.db.get_view_last_received(self.comboBox_state_imei.currentData())
+
+            self.dateTimeEdit_state_view_start.setDateTime(QDateTime.fromString(ts_start, Qt.ISODate))
+            self.dateTimeEdit_state_view_end.setDateTime(QDateTime.fromString(ts_end, Qt.ISODate))
+            if(last_received):
+                self.dateTimeEdit_state_view_end.setEnabled(False)
+
+            self.checkBox_state_view_last_received.setCheckState(last_received)
+
+
+    def update_sate_view_last_received(self, val):
+        if(self.comboBox_state_imei.currentIndex() != -1):
+            self.db.set_view_last(val, self.comboBox_state_imei.currentData())
+
+        if(val):
+            self.dateTimeEdit_state_view_end.setEnabled(False)
+        else:
+            self.dateTimeEdit_state_view_end.setEnabled(True)
+
+    def update_sate_view_end(self, datetime):
+        if(self.comboBox_state_imei.currentIndex() != -1):
+            print(datetime)
+            self.db.set_view_end(datetime.toString(Qt.ISODate), self.comboBox_state_imei.currentData())
+        return True
+
+    def update_sate_view_start(self, datetime):
+        if(self.comboBox_state_imei.currentIndex() != -1):
+            self.db.set_view_start(datetime.toString(Qt.ISODate), self.comboBox_state_imei.currentData())
+        return True
 
     def update_state_imei(self):
         if(self.comboBox_state_imei.currentIndex() != -1):
@@ -403,6 +458,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.update_momsn_bounds()
             self.update_state_info()
             self.update_tracking_seabot()
+            self.update_state_view()
 
     def update_mission_info(self, row):
         self.mission_selected = row
