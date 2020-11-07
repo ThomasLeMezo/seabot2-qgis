@@ -187,13 +187,14 @@ class LayerSeabot():
             # Data
             pr = layer.dataProvider()
             for feature in layer.getFeatures():
-                delta_t =  datetime.timedelta(seconds=round(time.clock_gettime(time.CLOCK_REALTIME) - data["ts"]))
+                delta_t =  str(datetime.timedelta(seconds=round(time.clock_gettime(time.CLOCK_REALTIME) - data["ts"])))
                 # if(delta_t>60):
                 #     delta_t /= 60.
                 #     delta_t = str(round(delta_t)) + " min"
                 # else:
                 #     delta_t = str(delta_t) + " sec"
-                delta_t = self.name + '\n' + str(delta_t)
+                if(self.name != ""):
+                    delta_t = self.name + '\n' + delta_t
                 pr.changeFeatures({feature.id():{0:self.layer_pose,1:data["gnss_heading"], 2:delta_t}}, {feature.id():QgsGeometry.fromPointXY(point)})
 
                 layer.updateExtents()

@@ -305,8 +305,9 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def fill_treeWidget_log_state(self):
         self.treeWidget_iridium.clear()
         if(self.data_log!=None):
+            qtime = QDateTime.fromSecsSinceEpoch(self.data_log["ts"], Qt.UTC)
             self.add_item_treeWidget("message_id")
-            self.add_item_treeWidget("ts", datetime.datetime.fromtimestamp(self.data_log["ts"]))
+            self.add_item_treeWidget("ts", qtime.toString("dd/MM/yy hh:mm:ss"))
             self.add_item_treeWidget("east", nb_digit=0)
             self.add_item_treeWidget("north", nb_digit=0)
             self.add_item_treeWidget("gnss_speed", nb_digit=2)
@@ -386,9 +387,9 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.pushButton_server_connect.setStyleSheet("background-color: rgb(251, 251, 251)")
             self.select_server()
 
-    def update_last_sync(self, datetime):
+    def update_last_sync(self, qt_time):
         if(self.comboBox_config_email.currentIndex() != -1):
-            self.db.update_last_sync(self.comboBox_config_email.currentData(), datetime.toString(Qt.ISODate))
+            self.db.update_last_sync(self.comboBox_config_email.currentData(), qt_time.toString(Qt.ISODate))
 
     def next_log_state(self):
         if(self.data_log != None):
@@ -422,8 +423,8 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             ts_start = self.db.get_view_start(self.comboBox_state_imei.currentData())
             last_received = self.db.get_view_last_received(self.comboBox_state_imei.currentData())
 
-            self.dateTimeEdit_state_view_start.setDateTime(QDateTime.fromString(ts_start, Qt.ISODate))
-            self.dateTimeEdit_state_view_end.setDateTime(QDateTime.fromString(ts_end, Qt.ISODate))
+            self.dateTimeEdit_state_view_start.setDateTime(QDateTime.fromSecsSinceEpoch(ts_start, Qt.UTC))
+            self.dateTimeEdit_state_view_end.setDateTime(QDateTime.fromSecsSinceEpoch(ts_end, Qt.UTC))
             if(last_received):
                 self.dateTimeEdit_state_view_end.setEnabled(False)
 
@@ -441,13 +442,12 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def update_sate_view_end(self, datetime):
         if(self.comboBox_state_imei.currentIndex() != -1):
-            print(datetime)
-            self.db.set_view_end(datetime.toString(Qt.ISODate), self.comboBox_state_imei.currentData())
+            self.db.set_view_end(datetime.toSecsSinceEpoch(), self.comboBox_state_imei.currentData())
         return True
 
-    def update_sate_view_start(self, datetime):
+    def update_sate_view_start(self, qt_time):
         if(self.comboBox_state_imei.currentIndex() != -1):
-            self.db.set_view_start(datetime.toString(Qt.ISODate), self.comboBox_state_imei.currentData())
+            self.db.set_view_start(qt_time.toSecsSinceEpoch(), self.comboBox_state_imei.currentData())
         return True
 
     def update_state_imei(self):

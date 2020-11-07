@@ -13,8 +13,8 @@ class DataBaseConnection():
 	sqlite_create_table = ['''CREATE TABLE "'''+sqlite_tables_name[0]+'''" (
 										`IMEI`	NUMERIC NOT NULL,
 										`NAME`	TEXT,
-										`view_start_ts`	DATETIME DEFAULT `2018-01-01 00:00:00.000`,
-										`view_end_ts` DATETIME DEFAULT `2050-01-01 00:00:00.000`,
+										`view_start_ts`	DATETIME DEFAULT `1514811661`,
+										`view_end_ts` DATETIME DEFAULT `2524614120`,
 										'view_last_received' BOOLEAN DEFAULT `1`,
 										PRIMARY KEY(IMEI)
 									)''',
@@ -276,13 +276,24 @@ class DataBaseConnection():
 		try:
 			sql_sentence = '''SELECT *
 								FROM SBD_LOG_STATE
-								INNER JOIN SBD_RECEIVED ON (
+								INNER JOIN SBD_RECEIVED ON
 									SBD_LOG_STATE.message_id = SBD_RECEIVED.message_id
-									AND
-									SBD_RECEIVED.IMEI IN (SELECT SBD_RECEIVED.IMEI FROM SBD_RECEIVED WHERE SBD_RECEIVED.message_id=?)
-									AND
-									SBD_RECEIVED.MOMSN > (SELECT SBD_RECEIVED.MOMSN FROM SBD_RECEIVED WHERE SBD_RECEIVED.message_id=?)
-								)
+									INNER JOIN ROBOTS ON (
+										ROBOTS.imei = SBD_RECEIVED.imei
+										AND
+										SBD_RECEIVED.IMEI IN (SELECT SBD_RECEIVED.IMEI FROM SBD_RECEIVED WHERE SBD_RECEIVED.message_id=?)
+										AND
+										SBD_RECEIVED.MOMSN > (SELECT SBD_RECEIVED.MOMSN FROM SBD_RECEIVED WHERE SBD_RECEIVED.message_id=?)
+										AND
+										SBD_LOG_STATE.ts >= ROBOTS.view_start_ts
+										AND
+										CASE ROBOTS.view_last_received
+										WHEN 0 THEN
+											SBD_LOG_STATE.ts <= ROBOTS.view_end_ts
+										ELSE
+											SBD_LOG_STATE.ts
+										END
+									)
 								ORDER BY ts
 								LIMIT 1'''
 			self.sqliteCursor.execute(sql_sentence, [message_id, message_id])
@@ -298,13 +309,24 @@ class DataBaseConnection():
 		try:
 			sql_sentence = '''SELECT *
 								FROM SBD_LOG_STATE
-								INNER JOIN SBD_RECEIVED ON (
+								INNER JOIN SBD_RECEIVED ON
 									SBD_LOG_STATE.message_id = SBD_RECEIVED.message_id
-									AND
-									SBD_RECEIVED.IMEI IN (SELECT SBD_RECEIVED.IMEI FROM SBD_RECEIVED WHERE SBD_RECEIVED.message_id=?)
-									AND
-									SBD_RECEIVED.MOMSN < (SELECT SBD_RECEIVED.MOMSN FROM SBD_RECEIVED WHERE SBD_RECEIVED.message_id=?)
-								)
+									INNER JOIN ROBOTS ON (
+										ROBOTS.imei = SBD_RECEIVED.imei
+										AND
+										SBD_RECEIVED.IMEI IN (SELECT SBD_RECEIVED.IMEI FROM SBD_RECEIVED WHERE SBD_RECEIVED.message_id=?)
+										AND
+										SBD_RECEIVED.MOMSN < (SELECT SBD_RECEIVED.MOMSN FROM SBD_RECEIVED WHERE SBD_RECEIVED.message_id=?)
+										AND
+										SBD_LOG_STATE.ts >= ROBOTS.view_start_ts
+										AND
+										CASE ROBOTS.view_last_received
+										WHEN 0 THEN
+											SBD_LOG_STATE.ts <= ROBOTS.view_end_ts
+										ELSE
+											SBD_LOG_STATE.ts
+										END
+									)
 								ORDER BY ts DESC
 								LIMIT 1'''
 			self.sqliteCursor.execute(sql_sentence, [message_id, message_id])
