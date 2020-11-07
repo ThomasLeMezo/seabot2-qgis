@@ -370,10 +370,21 @@ class DataBaseConnection():
 		try:
 			sql_sentence = '''SELECT *, SBD_RECEIVED.MOMSN
 							FROM SBD_LOG_STATE
-							INNER JOIN SBD_RECEIVED ON (
+							INNER JOIN SBD_RECEIVED ON
 								SBD_LOG_STATE.message_id = SBD_RECEIVED.message_id
 								AND
 								SBD_RECEIVED.IMEI = ?
+								INNER JOIN ROBOTS ON (
+									ROBOTS.imei = SBD_RECEIVED.imei
+									AND
+									SBD_LOG_STATE.ts >= ROBOTS.view_start_ts
+									AND
+									CASE ROBOTS.view_last_received
+									WHEN 0 THEN
+										SBD_LOG_STATE.ts <= ROBOTS.view_end_ts
+									ELSE
+										SBD_LOG_STATE.ts
+									END
 							)
 							ORDER BY SBD_RECEIVED.MOMSN DESC
 							LIMIT 1'''
@@ -390,11 +401,22 @@ class DataBaseConnection():
 		try:
 			sql_sentence = '''SELECT *
 							FROM SBD_LOG_STATE
-							INNER JOIN SBD_RECEIVED ON (
+							INNER JOIN SBD_RECEIVED ON
 								SBD_RECEIVED.MOMSN = ?
 								AND
 								SBD_RECEIVED.IMEI = ?
-							)
+								INNER JOIN ROBOTS ON (
+									ROBOTS.imei = SBD_RECEIVED.imei
+									AND
+									SBD_LOG_STATE.ts >= ROBOTS.view_start_ts
+									AND
+									CASE ROBOTS.view_last_received
+									WHEN 0 THEN
+										SBD_LOG_STATE.ts <= ROBOTS.view_end_ts
+									ELSE
+										SBD_LOG_STATE.ts
+									END
+								)
 							LIMIT 1'''
 			self.sqliteCursor.execute(sql_sentence, [momsn, imei])
 			row = self.sqliteCursor.fetchone()
@@ -409,12 +431,24 @@ class DataBaseConnection():
 		try:
 			sql_sentence = '''SELECT SBD_LOG_STATE.east, SBD_LOG_STATE.north
 							FROM SBD_LOG_STATE
-							INNER JOIN SBD_RECEIVED ON (
+							INNER JOIN SBD_RECEIVED ON
 								SBD_RECEIVED.IMEI = ?
 								AND
 								SBD_RECEIVED.message_id=SBD_LOG_STATE.message_id
+								INNER JOIN ROBOTS ON (
+									ROBOTS.imei = SBD_RECEIVED.imei
+									AND
+									SBD_LOG_STATE.ts >= ROBOTS.view_start_ts
+									AND
+									CASE ROBOTS.view_last_received
+									WHEN 0 THEN
+										SBD_LOG_STATE.ts <= ROBOTS.view_end_ts
+									ELSE
+										SBD_LOG_STATE.ts
+									END
 							)
 							ORDER BY SBD_RECEIVED.MOMSN DESC'''
+
 			self.sqliteCursor.execute(sql_sentence, [imei])
 			row = self.sqliteCursor.fetchall()
 			return row
@@ -425,11 +459,22 @@ class DataBaseConnection():
 		try:
 			sql_sentence = '''SELECT SBD_LOG_STATE.east, SBD_LOG_STATE.north
 							FROM SBD_LOG_STATE
-							INNER JOIN SBD_RECEIVED ON (
+							INNER JOIN SBD_RECEIVED ON
 								SBD_RECEIVED.IMEI = ?
 								AND
 								SBD_RECEIVED.message_id=SBD_LOG_STATE.message_id
-							)
+								INNER JOIN ROBOTS ON (
+									ROBOTS.imei = SBD_RECEIVED.imei
+									AND
+									SBD_LOG_STATE.ts >= ROBOTS.view_start_ts
+									AND
+									CASE ROBOTS.view_last_received
+									WHEN 0 THEN
+										SBD_LOG_STATE.ts <= ROBOTS.view_end_ts
+									ELSE
+										SBD_LOG_STATE.ts
+									END
+								)
 							ORDER BY SBD_RECEIVED.MOMSN DESC
 							LIMIT 1'''
 			self.sqliteCursor.execute(sql_sentence, [imei])

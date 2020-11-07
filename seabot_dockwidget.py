@@ -434,6 +434,9 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def update_sate_view_last_received(self, val):
         if(self.comboBox_state_imei.currentIndex() != -1):
             self.db.set_view_last(val, self.comboBox_state_imei.currentData())
+            self.update_state_info()
+            if(self.comboBox_state_imei.currentData() in self.layerSeabots):
+                self.layerSeabots[self.comboBox_state_imei.currentData()].update()
 
         if(val):
             self.dateTimeEdit_state_view_end.setEnabled(False)
@@ -443,11 +446,17 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def update_sate_view_end(self, datetime):
         if(self.comboBox_state_imei.currentIndex() != -1):
             self.db.set_view_end(datetime.toSecsSinceEpoch(), self.comboBox_state_imei.currentData())
+            self.update_state_info()
+            if(self.comboBox_state_imei.currentData() in self.layerSeabots):
+                self.layerSeabots[self.comboBox_state_imei.currentData()].update()
         return True
 
     def update_sate_view_start(self, qt_time):
         if(self.comboBox_state_imei.currentIndex() != -1):
             self.db.set_view_start(qt_time.toSecsSinceEpoch(), self.comboBox_state_imei.currentData())
+            self.update_state_info()
+            if(self.comboBox_state_imei.currentData() in self.layerSeabots):
+                self.layerSeabots[self.comboBox_state_imei.currentData()].update()
         return True
 
     def update_state_imei(self):
