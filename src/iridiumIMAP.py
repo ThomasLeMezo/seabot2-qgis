@@ -75,20 +75,20 @@ class ImapServer(QObject):
 		parser = IridiumMessageParser(DataBaseConnection(init_table=False))
 		data = parser.serialize_cmd_sleep(duration)
 		print(data)
-		self.send_mail(imei, data)
+		self.send_mail(imei, data, "sleep")
 		return
 
 	def send_mail_parameters(self, imei, enable_mission, enable_flash, enable_depth, enable_engine, period_message):
 		parser = IridiumMessageParser(DataBaseConnection(init_table=False))
 		data = parser.serialize_cmd_parameters(enable_mission, enable_flash, enable_depth, enable_engine, period_message)
 		print(data)
-		self.send_mail(imei, data)
+		self.send_mail(imei, data, "parameters")
 		return
 
 	def send_mail_mission(self, imei, filepath):
 		return
 
-	def send_mail(self, imei, data):
+	def send_mail(self, imei, data, msg_info):
 		if(self.is_connected):
 			db = DataBaseConnection(init_table=False)
 			login_data = db.get_server_data(self.server_id)
@@ -110,7 +110,14 @@ class ImapServer(QObject):
 			msg['To'] = login_data["iridium_server_mail"]
 			msg.attach(sbd_msg)
 
-			print(imei)
+			msgBox = QMessageBox()
+			msgBox.setText("Are you sure you want to send the CMD "+msg_info)
+			msgBox.setWindowTitle("Seabot")
+			msgBox.setStandardButtons(QMessageBox.Cancel | QMessageBox.Ok)
+			msgBox.setDefaultButton(QMessageBox.Cancel)
+			ret = msgBox.exec()
+			if(ret!=QMessageBox.Ok):
+				return
 
 			# Send message
 			try:
@@ -125,6 +132,8 @@ class ImapServer(QObject):
 			except socket.error as e:
 				print(e, flush=True)
 				return
+
+			print("Message sent to ", imei)
 
 			msgBox = QMessageBox()
 			msgBox.setText("The message was send to iridium server")
