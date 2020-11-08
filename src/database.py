@@ -49,8 +49,11 @@ class DataBaseConnection():
 									`config_id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 									`email`	TEXT NOT NULL,
 									`password`	TEXT NOT NULL,
-									`server_ip`	TEXT NOT NULL,
-									`server_port`	TEXT NOT NULL,
+									`server_imap_ip`	TEXT NOT NULL,
+									`server_imap_port`	TEXT NOT NULL,
+									`server_smtp_ip`	TEXT NOT NULL,
+									`server_smtp_port`	TEXT NOT NULL,
+									`iridium_server_mail`	TEXT NOT NULL,
 									`last_sync`	TEXT NOT NULL
 							)''',
 							'''CREATE TABLE "'''+sqlite_tables_name[3]+'''" (
@@ -146,13 +149,13 @@ class DataBaseConnection():
 			print("Error while connecting to sqlite", error)
 
 
-	def new_server(self, email, password, server_ip, server_port, t_zero = datetime.datetime.fromtimestamp(0)):
+	def new_server(self, email, password, server_imap_ip, server_imap_port, server_smtp_ip, server_smtp_port, iridium_server_mail, t_zero = datetime.datetime.fromtimestamp(0)):
 		try:
 			sqlite_insert_config = '''INSERT INTO CONFIG
-						  (email, password, server_ip, server_port, last_sync)
-						  VALUES (?, ?, ?, ?, ?);'''
+						  (email, password, server_imap_ip, server_imap_port, server_smtp_ip, server_smtp_port, iridium_server_mail, last_sync)
+						  VALUES (?, ?, ?, ?, ?, ?, ?, ?);'''
 
-			data_tuple = (email, password, server_ip, server_port, t_zero)
+			data_tuple = (email, password, server_imap_ip, server_imap_port, server_smtp_ip, server_smtp_port, iridium_server_mail, t_zero)
 			self.sqliteCursor.execute(sqlite_insert_config, data_tuple)
 			self.sqliteConnection.commit()
 			return True
@@ -160,13 +163,13 @@ class DataBaseConnection():
 			print("Error while connecting to sqlite", error)
 			return False
 
-	def save_server(self, email, password, server_ip, server_port, t_zero, config_id):
+	def save_server(self, email, password, server_imap_ip, server_imap_port, server_smtp_ip, server_smtp_port, iridium_server_mail, t_zero, config_id):
 		try:
 			sqlite_insert_config = '''UPDATE CONFIG SET
-						  email= ?, password=?, server_ip=?, server_port=?, last_sync=?
+						  email= ?, password=?, server_imap_ip=?, server_imap_port=?, server_smtp_ip=?, server_smtp_port=?, iridium_server_mail=?, last_sync=?
 						  WHERE config_id = ?'''
 
-			data_tuple = (email, password, server_ip, server_port, t_zero, config_id)
+			data_tuple = (email, password, server_imap_ip, server_imap_port, server_smtp_ip, server_smtp_port, iridium_server_mail, t_zero, config_id)
 			self.sqliteCursor.execute(sqlite_insert_config, data_tuple)
 			self.sqliteConnection.commit()
 			return True
@@ -192,9 +195,12 @@ class DataBaseConnection():
 				data["server_id"] = records[0]
 				data["email"] = records[1]
 				data["password"] = records[2]
-				data["server_ip"] = records[3]
-				data["server_port"] = records[4]
-				data["last_sync"] = QDateTime.fromString(records[5], Qt.ISODate)
+				data["server_imap_ip"] = records[3]
+				data["server_imap_port"] = records[4]
+				data["server_smtp_ip"] = records[5]
+				data["server_smtp_port"] = records[6]
+				data["iridium_server_mail"] = records[7]
+				data["last_sync"] = QDateTime.fromString(records[8], Qt.ISODate)
 			return data
 		except sqlite3.Error as error:
 			print("Error while connecting to sqlite", error)

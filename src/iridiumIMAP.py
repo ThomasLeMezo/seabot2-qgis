@@ -1,10 +1,18 @@
 import imaplib
 import time
 import os
+import math
 
 import email
 from email.policy import default
 from email.utils import parsedate_tz, parsedate
+
+import smtplib
+import ssl
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 
 import time
 import calendar
@@ -24,26 +32,34 @@ import logging
 import socket
 
 from PyQt5.QtCore import QDate, QTime, QDateTime, Qt, QLocale, QObject, pyqtSignal
+from PyQt5.QtWidgets import QMessageBox
 from .database import *
 
 class ImapServer(QObject):
 	socket.setdefaulttimeout(1)
 	imap_signal = pyqtSignal()
+	imap_signal_log = pyqtSignal(str)
+	imap_signal_button_color = pyqtSignal(bool)
+	imap_status_next_connection = pyqtSignal(int)
+	imap_update_dt = 5 # in sec
 
-	def __init__(self):
+	def __init__(self, send_mail_test, imap_signal_stop_server):
 		super().__init__()
 		self.serverIMAP = None
 		self.mailbox = 'INBOX'
 		self.is_connected = False
 		self.is_first_connection = True
 		self.running = False
-		self.log = "?"
+		self.imap_signal_log.emit("?")
 		self.server_id = -1
 		self.thread = None
 		self.db = DataBaseConnection(init_table=True)
 		self.locale = QLocale(QLocale.English, QLocale.UnitedStates)
 		self.start_sync = None
 		self.last_mail_datetime = None
+
+		send_mail_test.connect(self.test_send_mail)
+		imap_signal_stop_server.connect(self.stop_server)
 
 	def __del__(self):
 		# with self.lock:
@@ -52,6 +68,47 @@ class ImapServer(QObject):
 			self.thread.join()
 		self.close_server()
 
+	def test_send_mail(self, iridium_imei):
+		if(self.is_connected):
+			db = DataBaseConnection(init_table=False)
+			login_data = db.get_server_data(self.server_id)
+
+			sbd_msg = MIMEBase("application", "x-zip-compressed")
+
+			iridium_mtmsn = "000001"
+			filename = iridium_imei + "_" + iridium_mtmsn + ".sbd"
+			sbd_msg.add_header('Content-Disposition', 'attachment', filename=filename)
+			sbd_msg.set_payload("Test")
+			encoders.encode_base64(sbd_msg)
+
+			msg = MIMEMultipart('alternative')
+			msg['Subject'] = iridium_imei
+			msg['From'] = "<Seabot> <"+login_data["email"]+">"
+			msg['To'] = login_data["iridium_server_mail"]
+			msg.attach(sbd_msg)
+			print(iridium_imei)
+
+			# Send message
+			try:
+				s = smtplib.SMTP(login_data["server_smtp_ip"], login_data["server_smtp_port"])
+				s.ehlo()
+				context = ssl.SSLContext(ssl.PROTOCOL_TLS)
+				s.starttls(context=context)
+				s.ehlo()
+				s.login(login_data["email"],login_data["password"])
+				s.sendmail(login_data["email"], login_data["iridium_server_mail"], msg.as_string())
+				s.close()
+			except smtplib.SMTP.error as err:
+				print(err, flush=True)
+				return
+
+			msgBox = QMessageBox()
+			msgBox.setText("The message was send to iridium server")
+			msgBox.setWindowTitle("Seabot")
+			msgBox.exec()
+		else:
+			print("Server Down")
+
 	def start_server(self):
 		# with self.lock:
 		self.running = True
@@ -59,9 +116,11 @@ class ImapServer(QObject):
 		self.thread.start()
 
 	def stop_server(self):
+		print("STOP SERVER RECEIVED")
 		# with self.lock:
 		if(self.running == True):
 			self.running = False
+		self.close_server()
 		if(self.thread != None):
 			self.thread.join()
 
@@ -72,19 +131,28 @@ class ImapServer(QObject):
 			try:
 				self.serverIMAP.close()
 				self.serverIMAP.logout()
+				self.imap_signal_log.emit("Disconnected")
+				print("Server disconnected")
 			except imaplib.IMAP4.error as err:
 				print(err, flush=True)
 
 	def update_imap(self):
-		self.db = DataBaseConnection(init_table=True)
+		self.db = DataBaseConnection(init_table=False)
+		time_counter = 0
+		freq = 2 # Hz
 		while self.running:
 			if(not self.is_connected):
+				self.imap_signal_button_color.emit(False)
 				self.connect_imap()
-			if(self.is_connected and self.is_first_connection):
-				self.update_first_connection()
-			if(self.is_connected and not self.is_first_connection):
-				self.update_recent()
-			time.sleep(5.0)
+			if(time_counter==0):
+				if(self.is_connected and self.is_first_connection):
+					self.update_first_connection()
+				if(self.is_connected and not self.is_first_connection):
+					self.update_recent()
+				time_counter=freq*self.imap_update_dt
+			time.sleep(1./freq)
+			time_counter -= 1
+			self.imap_status_next_connection.emit(math.ceil(time_counter/freq))
 
 	def set_server_id(self, server_id):
 		self.server_id = server_id
@@ -97,15 +165,16 @@ class ImapServer(QObject):
 			if(len(login_data)==0):
 				raise Exception('wrong server_id ', self.server_id)
 
-			self.serverIMAP = imaplib.IMAP4_SSL(login_data["server_ip"], login_data["server_port"])
+			self.serverIMAP = imaplib.IMAP4_SSL(login_data["server_imap_ip"], login_data["server_imap_port"])
 			rsp = self.serverIMAP.login(login_data["email"], login_data["password"])
 
 			if(rsp[1][0].decode()=="LOGIN completed."):
 				self.is_connected = True
 				self.is_first_connection = True
+				self.imap_signal_button_color.emit(True)
 				rsp, nb_message_inbox = self.serverIMAP.select(mailbox=self.mailbox, readonly=False)
 				print("select rsp = ", rsp, " nb_message = ", nb_message_inbox[0].decode())
-				self.log = "Connected"
+				self.imap_signal_log.emit("Connected")
 			else:
 				raise Exception('Failed to select')
 
@@ -113,17 +182,17 @@ class ImapServer(QObject):
 
 		except imaplib.IMAP4.error as err:
 			print("Error imap ", err)
-			self.log = "Error IMAP"
+			self.imap_signal_log.emit("Error IMAP")
 			self.close_server()
 			return False
 		except sqlite3.Error as error:
 			print("Error sqlite ", error)
-			self.log = "Error SQLITE"
+			self.imap_signal_log.emit("Error SQLITE")
 			self.close_server()
 			return False
 		except:
 			print("Error ", sys.exc_info())
-			self.log = "Error - No connection"
+			self.imap_signal_log.emit("Error - No connection")
 			self.close_server()
 			return False
 
@@ -134,13 +203,13 @@ class ImapServer(QObject):
 			for num in list_msg_num:
 				if(not self.download_msg(num.decode())):
 					return False
-				self.log = "Update " + str(k) + "/" + str(len(list_msg_num)) + " (" + str(num.decode()) + ")"
+				self.imap_signal_log.emit("Update " + str(k) + "/" + str(len(list_msg_num)) + " (" + str(num.decode()) + ")")
 				k+=1
 			self.imap_signal.emit()
 			return True
 
 	def update_recent(self):
-		self.log = "Update " + str(datetime.datetime.now().replace(microsecond=0))
+		self.imap_signal_log.emit("Update " + str(datetime.datetime.now().replace(microsecond=0)))
 		try:
 			t = datetime.datetime.now()
 			rsp, msgnums = self.serverIMAP.recent()
@@ -152,12 +221,12 @@ class ImapServer(QObject):
 		except imaplib.IMAP4.error as err:
 			self.close_server()
 			print(err, flush=True)
-			self.log = "Error imaplib"
+			self.imap_signal_log.emit("Error imaplib")
 			return False
 		except:
 			print("Error ", sys.exc_info())
 			self.close_server()
-			self.log = "Error (timeout)"
+			self.imap_signal_log.emit("Error (timeout)")
 			return False
 
 	def update_first_connection(self):
@@ -179,18 +248,18 @@ class ImapServer(QObject):
 			return True
 		except imaplib.IMAP4.error as err:
 			self.close_server()
-			self.log = "Error IMAP"
+			self.imap_signal_log.emit("Error IMAP")
 			print(err)
 			return False
 		except sqlite3.Error as error:
 			self.close_server()
-			self.log = "Error SQLITE"
+			self.imap_signal_log.emit("Error SQLITE")
 			print(error)
 			return False
 		except:
 			print("Error ", sys.exc_info())
 			self.close_server()
-			self.log = "Error - No connection"
+			self.imap_signal_log.emit("Error - No connection")
 			return False
 
 	def download_msg(self, msgnum):
@@ -201,7 +270,7 @@ class ImapServer(QObject):
 			typ, data_msg = self.serverIMAP.fetch(msgnum, '(BODY.PEEK[])')
 		except imaplib.IMAP4.error as err:
 			self.close_server()
-			self.log = "Error IMAP"
+			self.imap_signal_log.emit("Error IMAP")
 			print(err)
 			return False
 
@@ -228,6 +297,7 @@ class ImapServer(QObject):
 			## Extract enclosed file
 			for part in mail.iter_attachments():
 				if part.get_content_maintype() == 'application':
+					#print(part.get_content_maintype(), part.get_content_subtype())
 					# Extract momsn from attached file
 					print(part.get_filename())
 					momsn = int(re.search("_(.*)\.", part.get_filename()).group(1))
@@ -240,12 +310,6 @@ class ImapServer(QObject):
 						msg_data = part.get_payload(decode=True)
 						IridiumMessageParser(msg_data, self.db, message_id, time_connection)
 		return True
-
-	def get_log(self):
-		return self.log
-
-	def get_is_connected(self):
-		return self.is_connected
 
 class IridiumMessageParser():
 	message_type = 0

@@ -22,7 +22,7 @@
  ***************************************************************************/
 """
 
-import os, time
+import os, time, math
 
 from PyQt5 import QtGui, QtWidgets, uic
 from PyQt5.QtCore import pyqtSignal, QTimer, QFile, QFileInfo
@@ -44,6 +44,8 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     closingPlugin = pyqtSignal()
+    send_mail_test = pyqtSignal(str)
+    imap_signal_stop_server = pyqtSignal()
 
     def __init__(self, iface, parent=None):
         """Constructor."""
@@ -61,7 +63,6 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.timer_seabot = QTimer()
         self.timer_boat = QTimer()
         self.timer_mission = QTimer()
-        self.timer_IMAP = QTimer()
 
         self.momsn_min = 0
         self.momsn_max = 0
@@ -78,14 +79,17 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         # DB
         self.db = DataBaseConnection()
-        self.imapServer = ImapServer()
+        self.imapServer = ImapServer(self.send_mail_test, self.imap_signal_stop_server)
         self.mission_selected = -1
         self.mission_selected_last = -2
 
         ################################################################
 
-        # Imap Update
+        # Imap Slots
         self.imapServer.imap_signal.connect(self.update_imap)
+        self.imapServer.imap_signal_log.connect(self.update_log_msg)
+        self.imapServer.imap_signal_button_color.connect(self.update_connect_button_color)
+        self.imapServer.imap_status_next_connection.connect(self.update_progress_bar)
 
         ### Timer handle
         self.timer_seabot.timeout.connect(self.process_seabot)
@@ -98,9 +102,6 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.timer_mission.timeout.connect(self.process_mission)
         self.timer_mission.setInterval(1000)
         self.timer_mission.start()
-
-        self.timer_IMAP.timeout.connect(self.process_IMAP)
-        self.timer_IMAP.setInterval(1000)
 
         ### UI pushButton handle
         # Init tree Widget
@@ -143,6 +144,11 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.dateTimeEdit_state_view_end.dateTimeChanged.connect(self.update_sate_view_end)
         self.dateTimeEdit_state_view_start.dateTimeChanged.connect(self.update_sate_view_start)
 
+        # COM tab
+        self.pushButton_com_send.clicked.connect(self.send_com)
+
+        self.dial_com_sleep_duration.valueChanged.connect(self.update_com_sleep_duration)
+
         # Fill list of email account
         self.update_server_list()
 
@@ -152,20 +158,26 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def server_save(self, event):
         email = self.lineEdit_email.text()
         password = self.lineEdit_password.text()
-        server_ip = self.lineEdit_server_ip.text()
-        server_port = self.lineEdit_server_port.text()
+        server_imap_ip = self.lineEdit_imap_server_ip.text()
+        server_imap_port = self.lineEdit_imap_server_port.text()
+        server_smtp_ip = self.lineEdit_smtp_server_ip.text()
+        server_smtp_port = self.lineEdit_smtp_server_port.text()
+        iridium_mail = self.lineEdit_iridium_server_mail.text()
         t_zero = self.dateTimeEdit_last_sync.dateTime().toString(Qt.ISODate)
-        self.db.save_server(email, password, server_ip, server_port, t_zero, self.comboBox_config_email.currentData())
+        self.db.save_server(email, password, server_imap_ip, server_imap_port, server_smtp_ip, server_smtp_port, iridium_mail, t_zero, self.comboBox_config_email.currentData())
         self.update_server_list()
         return True
 
     def server_new(self, event):
         email = self.lineEdit_email.text()
         password = self.lineEdit_password.text()
-        server_ip = self.lineEdit_server_ip.text()
-        server_port = self.lineEdit_server_port.text()
+        server_imap_ip = self.lineEdit_imap_server_ip.text()
+        server_imap_port = self.lineEdit_imap_server_port.text()
+        server_smtp_ip = self.lineEdit_smtp_server_ip.text()
+        server_smtp_port = self.lineEdit_smtp_server_port.text()
+        iridium_mail = self.lineEdit_iridium_server_mail.text()
         t_zero = self.dateTimeEdit_last_sync.dateTime().toString(Qt.ISODate)
-        self.db.new_server(email, password, server_ip, server_port, t_zero)
+        self.db.new_server(email, password, server_imap_ip, server_imap_port, server_smtp_ip, server_smtp_port, iridium_mail, t_zero)
         self.update_server_list()
         return True
 
@@ -223,8 +235,11 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             server_data = self.db.get_server_data(server_id)
             self.lineEdit_email.setText(str(server_data["email"]))
             self.lineEdit_password.setText(str(server_data["password"]))
-            self.lineEdit_server_ip.setText(str(server_data["server_ip"]))
-            self.lineEdit_server_port.setText(str(server_data["server_port"]))
+            self.lineEdit_imap_server_ip.setText(str(server_data["server_imap_ip"]))
+            self.lineEdit_imap_server_port.setText(str(server_data["server_imap_port"]))
+            self.lineEdit_smtp_server_ip.setText(str(server_data["server_smtp_ip"]))
+            self.lineEdit_smtp_server_port.setText(str(server_data["server_smtp_port"]))
+            self.lineEdit_iridium_server_mail.setText(str(server_data["iridium_server_mail"]))
             self.dateTimeEdit_last_sync.setDateTime(server_data["last_sync"])
 
     def open_mission(self, event):
@@ -255,12 +270,8 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def closeEvent(self, event):
         self.timer_seabot.stop()
         self.timer_boat.stop()
-        self.timer_IMAP.stop()
         self.timer_mission.stop()
-
-        self.imapServer.stop_server()
-        # self.layerSeabots.clear()
-        # self.layerMissions.clear()
+        self.imap_signal_stop_server.emit()
 
         self.closingPlugin.emit()
         event.accept()
@@ -270,22 +281,30 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.comboBox_config_email.setEnabled(True)
             self.lineEdit_email.setEnabled(True)
             self.lineEdit_password.setEnabled(True)
-            self.lineEdit_server_ip.setEnabled(True)
-            self.lineEdit_server_port.setEnabled(True)
+            self.lineEdit_imap_server_ip.setEnabled(True)
+            self.lineEdit_imap_server_port.setEnabled(True)
+            self.lineEdit_smtp_server_ip.setEnabled(True)
+            self.lineEdit_smtp_server_port.setEnabled(True)
+            self.lineEdit_iridium_server_mail.setEnabled(True)
             self.pushButton_server_save.setEnabled(True)
             self.pushButton_server_new.setEnabled(True)
             self.pushButton_server_delete.setEnabled(True)
             self.dateTimeEdit_last_sync.setEnabled(True)
+            self.pushButton_com_send.setEnabled(False)
         else:
             self.comboBox_config_email.setEnabled(False)
             self.lineEdit_email.setEnabled(False)
             self.lineEdit_password.setEnabled(False)
-            self.lineEdit_server_ip.setEnabled(False)
-            self.lineEdit_server_port.setEnabled(False)
+            self.lineEdit_imap_server_ip.setEnabled(False)
+            self.lineEdit_imap_server_port.setEnabled(False)
+            self.lineEdit_smtp_server_ip.setEnabled(False)
+            self.lineEdit_smtp_server_port.setEnabled(False)
+            self.lineEdit_iridium_server_mail.setEnabled(False)
             self.pushButton_server_save.setEnabled(False)
             self.pushButton_server_new.setEnabled(False)
             self.pushButton_server_delete.setEnabled(False)
             self.dateTimeEdit_last_sync.setEnabled(False)
+            self.pushButton_com_send.setEnabled(True)
 
     def add_item_treeWidget(self, val1, val2=None, nb_digit=-1):
         item = None
@@ -368,22 +387,13 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.layerBoat.stop()
 
     def server_connect(self):
-        # self.pushButton_server_connect.setStyleSheet("background-color: red")
         if(self.pushButton_server_connect.isChecked()):
             self.set_enable_form_connect(False)
             self.imapServer.set_server_id(self.comboBox_config_email.currentData())
-
-            ## Thread IMAP
             self.imapServer.start_server()
-
-            ## UI update
-            self.timer_IMAP.start()
         else:
+            self.imap_signal_stop_server.emit()
             self.set_enable_form_connect(True)
-            self.label_server_log.setText("Disconnected")
-            ## Thread IMAP
-            self.imapServer.stop_server()
-            self.timer_IMAP.stop()
             self.pushButton_server_connect.setStyleSheet("background-color: rgb(251, 251, 251)")
             self.select_server()
 
@@ -502,13 +512,6 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def process_boat(self):
         self.layerBoat.update()
 
-    def process_IMAP(self):
-        self.label_server_log.setText(self.imapServer.get_log())
-        if(self.imapServer.get_is_connected()):
-            self.pushButton_server_connect.setStyleSheet("background-color: green")
-        else:
-            self.pushButton_server_connect.setStyleSheet("background-color: red")
-
     def process_mission(self):
         if(len(self.layerMissions)>0):
             for layerMission in self.layerMissions:
@@ -522,7 +525,6 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.label_mission_file.setText(seabotMission.get_filename())
             # Update IHM with mission data set point
             wp = seabotMission.get_current_wp()
-            # print(wp)
             if(wp!=None):
                 if(wp.get_depth()==0.0 or seabotMission.is_end_mission()):
                     self.label_mission_status.setText("SURFACE")
@@ -575,3 +577,24 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.tableWidget_mission.setItem(row, 2, QTableWidgetItem(str(wp.get_time_start()-time_now)))
         self.tableWidget_mission.setItem(row, 3, QTableWidgetItem(str(wp.get_time_start())))
         self.tableWidget_mission.setItem(row, 4, QTableWidgetItem(str(wp.get_time_end())))
+
+    def send_com(self):
+        if(self.comboBox_state_imei.currentIndex() != -1):
+            self.send_mail_test.emit(str(self.comboBox_state_imei.currentData()))
+
+    def update_log_msg(self, val):
+        self.label_server_log.setText(val)
+
+    def update_connect_button_color(self, is_connected):
+        if(is_connected):
+            self.pushButton_server_connect.setStyleSheet("background-color: green")
+        else:
+            self.pushButton_server_connect.setStyleSheet("background-color: red")
+
+    def update_progress_bar(self, val):
+        self.progressBar_imap_next_connection.setValue(val)
+
+    def update_com_sleep_duration(self, val):
+        val_hours = math.floor(val/60.)
+        val_min = val-val_hours*60
+        self.label_com_sleep_duration.setText("Duration (" + str(val_hours) + "h" + str(val_min) + "min" + ")")
