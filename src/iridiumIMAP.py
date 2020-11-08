@@ -12,7 +12,7 @@ import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
-from email import encoders
+from base64 import encodebytes
 
 import time
 import calendar
@@ -43,7 +43,7 @@ class ImapServer(QObject):
 	imap_status_next_connection = pyqtSignal(int)
 	imap_update_dt = 5 # in sec
 
-	def __init__(self, send_mail_test, imap_signal_stop_server):
+	def __init__(self, send_mail_sleep, send_mail_parameters, send_mail_mission, imap_signal_stop_server):
 		super().__init__()
 		self.serverIMAP = None
 		self.mailbox = 'INBOX'
@@ -58,7 +58,10 @@ class ImapServer(QObject):
 		self.start_sync = None
 		self.last_mail_datetime = None
 
-		send_mail_test.connect(self.test_send_mail)
+		send_mail_sleep.connect(self.send_mail_sleep)
+		send_mail_parameters.connect(self.send_mail_parameters)
+		send_mail_mission.connect(self.send_mail_mission)
+
 		imap_signal_stop_server.connect(self.stop_server)
 
 	def __del__(self):
@@ -68,25 +71,46 @@ class ImapServer(QObject):
 			self.thread.join()
 		self.close_server()
 
-	def test_send_mail(self, iridium_imei):
+	def send_mail_sleep(self, imei, duration):
+		parser = IridiumMessageParser(DataBaseConnection(init_table=False))
+		data = parser.serialize_cmd_sleep(duration)
+		print(data)
+		self.send_mail(imei, data)
+		return
+
+	def send_mail_parameters(self, imei, enable_mission, enable_flash, enable_depth, enable_engine, period_message):
+		parser = IridiumMessageParser(DataBaseConnection(init_table=False))
+		data = parser.serialize_cmd_parameters(enable_mission, enable_flash, enable_depth, enable_engine, period_message)
+		print(data)
+		self.send_mail(imei, data)
+		return
+
+	def send_mail_mission(self, imei, filepath):
+		return
+
+	def send_mail(self, imei, data):
 		if(self.is_connected):
 			db = DataBaseConnection(init_table=False)
 			login_data = db.get_server_data(self.server_id)
 
-			sbd_msg = MIMEBase("application", "x-zip-compressed")
+			sbd_msg = MIMEBase("application", "octet-stream") # x-zip-compressed
 
 			iridium_mtmsn = "000001"
-			filename = iridium_imei + "_" + iridium_mtmsn + ".sbd"
+			filename = imei + "_" + iridium_mtmsn + ".sbd"
+
+			sbd_msg.set_payload(encodebytes(data))
 			sbd_msg.add_header('Content-Disposition', 'attachment', filename=filename)
-			sbd_msg.set_payload("Test")
-			encoders.encode_base64(sbd_msg)
+			sbd_msg.add_header('Content-Transfer-Encoding', 'base64')
+
+			# encoders.encode_base64(sbd_msg)
 
 			msg = MIMEMultipart('alternative')
-			msg['Subject'] = iridium_imei
+			msg['Subject'] = imei
 			msg['From'] = "<Seabot> <"+login_data["email"]+">"
 			msg['To'] = login_data["iridium_server_mail"]
 			msg.attach(sbd_msg)
-			print(iridium_imei)
+
+			print(imei)
 
 			# Send message
 			try:
@@ -98,8 +122,8 @@ class ImapServer(QObject):
 				s.login(login_data["email"],login_data["password"])
 				s.sendmail(login_data["email"], login_data["iridium_server_mail"], msg.as_string())
 				s.close()
-			except smtplib.SMTP.error as err:
-				print(err, flush=True)
+			except socket.error as e:
+				print(e, flush=True)
 				return
 
 			msgBox = QMessageBox()
@@ -315,6 +339,7 @@ class IridiumMessageParser():
 	message_type = 0
 	message = None
 	db = None
+	CMD_MSG_TYPE = {"LOG_STATE":0, "CMD_SLEEP":1, "CMD_MISSION":2, "CMD_PARAMETERS":3}
 
 	def __init__(self, message_string, db, message_id, send_time):
 		self.message = int.from_bytes(message_string, byteorder='little', signed=False)
@@ -325,9 +350,21 @@ class IridiumMessageParser():
 		## Assume
 		self.save_log_state(message_id, send_time)
 
+	def __init__(self, db):
+		self.db = db
+
 	def save_log_state(self, message_id, send_time):
 		message_data = self.deserialize_log_state(self.message, send_time)
 		self.db.add_sbd_log_state(message_id, message_data)
+
+	def serialize_data(self, data, val, nb_bit, start_bit, value_min=None, value_max=None):
+		if(value_min!=None and value_max!=None):
+			scale = (value_max-value_min)/(1<<nb_bit-1)
+			v=v*scale+value_min
+			val=(val-value_min)/scale
+		mask = ((1<<nb_bit)-1) << start_bit
+		data = data | (mask & val<<start_bit)
+		return data, nb_bit+start_bit
 
 	def deserialize_data(self, data, nb_bit, start_bit, value_min=None, value_max=None):
 		mask = ((1<<nb_bit)-1) << start_bit
@@ -336,6 +373,24 @@ class IridiumMessageParser():
 			scale = (value_max-value_min)/(1<<nb_bit-1)
 			v=v*scale+value_min
 		return v, start_bit+nb_bit
+
+	def serialize_cmd_parameters(self, enable_mission=True, enable_flash=True, enable_depth=True, enable_engine=True, period_message=60):
+		bit_position = 0
+		data = 0b0
+		data, bit_position = self.serialize_data(data, self.CMD_MSG_TYPE["CMD_PARAMETERS"],4, bit_position)
+		data, bit_position = self.serialize_data(data, enable_mission,1, bit_position)
+		data, bit_position = self.serialize_data(data, enable_flash,1, bit_position)
+		data, bit_position = self.serialize_data(data, enable_depth,1, bit_position)
+		data, bit_position = self.serialize_data(data, enable_engine,1, bit_position)
+		data, bit_position = self.serialize_data(data, period_message,8, bit_position)
+		return data.to_bytes(int(bit_position/8), byteorder='big')
+
+	def serialize_cmd_sleep(self, duration=0):
+		bit_position = 0
+		data = 0b0
+		data, bit_position = self.serialize_data(data, self.CMD_MSG_TYPE["CMD_SLEEP"],4, bit_position)
+		data, bit_position = self.serialize_data(data, duration,12, bit_position)
+		return data.to_bytes(int(bit_position/8), byteorder='big')
 
 	def deserialize_log_state(self, data, send_time):
 		bit_position = 0

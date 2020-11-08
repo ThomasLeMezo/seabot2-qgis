@@ -44,7 +44,10 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     closingPlugin = pyqtSignal()
-    send_mail_test = pyqtSignal(str)
+    send_mail_sleep = pyqtSignal(str, int)
+    send_mail_parameters = pyqtSignal(str, bool, bool, bool, bool, int)
+    send_mail_mission = pyqtSignal(str, str)
+
     imap_signal_stop_server = pyqtSignal()
 
     def __init__(self, iface, parent=None):
@@ -79,7 +82,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         # DB
         self.db = DataBaseConnection()
-        self.imapServer = ImapServer(self.send_mail_test, self.imap_signal_stop_server)
+        self.imapServer = ImapServer(self.send_mail_sleep, self.send_mail_parameters, self.send_mail_mission, self.imap_signal_stop_server)
         self.mission_selected = -1
         self.mission_selected_last = -2
 
@@ -145,9 +148,12 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.dateTimeEdit_state_view_start.dateTimeChanged.connect(self.update_sate_view_start)
 
         # COM tab
-        self.pushButton_com_send.clicked.connect(self.send_com)
+        self.pushButton_com_send_sleep.clicked.connect(self.send_com_sleep)
+        self.pushButton_com_send_mission.clicked.connect(self.send_com_mission)
+        self.pushButton_com_send_parameters.clicked.connect(self.send_com_parameters)
 
         self.dial_com_sleep_duration.valueChanged.connect(self.update_com_sleep_duration)
+        self.dial_com_mission_message_period.valueChanged.connect(self.update_com_mission_message_period)
 
         # Fill list of email account
         self.update_server_list()
@@ -290,7 +296,9 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.pushButton_server_new.setEnabled(True)
             self.pushButton_server_delete.setEnabled(True)
             self.dateTimeEdit_last_sync.setEnabled(True)
-            self.pushButton_com_send.setEnabled(False)
+            self.pushButton_com_send_sleep.setEnabled(False)
+            self.pushButton_com_send_parameters.setEnabled(False)
+            self.pushButton_com_send_mission.setEnabled(False)
         else:
             self.comboBox_config_email.setEnabled(False)
             self.lineEdit_email.setEnabled(False)
@@ -304,7 +312,9 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.pushButton_server_new.setEnabled(False)
             self.pushButton_server_delete.setEnabled(False)
             self.dateTimeEdit_last_sync.setEnabled(False)
-            self.pushButton_com_send.setEnabled(True)
+            self.pushButton_com_send_sleep.setEnabled(True)
+            self.pushButton_com_send_parameters.setEnabled(True)
+            self.pushButton_com_send_mission.setEnabled(True)
 
     def add_item_treeWidget(self, val1, val2=None, nb_digit=-1):
         item = None
@@ -578,9 +588,21 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.tableWidget_mission.setItem(row, 3, QTableWidgetItem(str(wp.get_time_start())))
         self.tableWidget_mission.setItem(row, 4, QTableWidgetItem(str(wp.get_time_end())))
 
-    def send_com(self):
+    def send_com_sleep(self):
         if(self.comboBox_state_imei.currentIndex() != -1):
-            self.send_mail_test.emit(str(self.comboBox_state_imei.currentData()))
+            self.send_mail_sleep.emit(str(self.comboBox_state_imei.currentData()), self.dial_com_sleep_duration.value())
+
+    def send_com_mission(self):
+        return
+
+    def send_com_parameters(self):
+        if(self.comboBox_state_imei.currentIndex() != -1):
+            self.send_mail_parameters.emit(str(self.comboBox_state_imei.currentData()),\
+                self.checkBox_com_param_mission.isChecked(),\
+                self.checkBox_com_param_flash.isChecked(),\
+                self.checkBox_com_param_depth.isChecked(),\
+                self.checkBox_com_param_engine.isChecked(),\
+                self.dial_com_mission_message_period.value())
 
     def update_log_msg(self, val):
         self.label_server_log.setText(val)
@@ -597,4 +619,10 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def update_com_sleep_duration(self, val):
         val_hours = math.floor(val/60.)
         val_min = val-val_hours*60
-        self.label_com_sleep_duration.setText("Duration (" + str(val_hours) + "h" + str(val_min) + "min" + ")")
+        self.label_com_sleep_duration.setText("Duration\n" + str(val_hours) + "h " + str(val_min) + "min" + "")
+
+    def update_com_mission_message_period(self, val):
+        val= val/10.*60. # in sec
+        val_min = math.floor(val/60.)
+        val_sec = val-val_min*60
+        self.label_com_mission_message_period.setText("Message Period\n" + str(val_min) + "min " + str({}).format(int(val_sec)) + "s")
