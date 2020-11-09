@@ -6,7 +6,7 @@ from PyQt5.QtCore import QFileInfo
 
 class SeabotWaypoint():
 
-	def __init__(self, wp_id ,time_end, time_start, duration, depth, east, north, limit_velocity, approach_velocity, enable_thrusters):
+	def __init__(self, wp_id ,time_end, time_start, duration, depth, east, north, limit_velocity, approach_velocity, enable_thrusters, seafloor_landing):
 		self.time_end = time_end
 		self.time_start = time_start
 		self.duration = duration
@@ -15,7 +15,13 @@ class SeabotWaypoint():
 		self.north = north
 		self.limit_velocity = limit_velocity
 		self.approach_velocity = approach_velocity
-		self.enable_thrusters = enable_thrusters
+
+		if(east==0 and north==0):
+			self.enable_thrusters = False
+		else:
+			self.enable_thrusters = True
+		self.seafloor_landing = seafloor_landing
+
 		self.id = wp_id
 
 	def __str__(self):
@@ -29,6 +35,7 @@ class SeabotWaypoint():
 		s += "limit_velocity" + "=" + str(self.limit_velocity) + "\n"
 		s += "approach_velocity" + "=" + str(self.approach_velocity) + "\n"
 		s += "enable_thrusters" + "=" + str(self.enable_thrusters) + "\n"
+		s += "seafloor_landing" + "=" + str(self.seafloor_landing) + "\n"
 		return s
 
 	def get_time_end(self):
@@ -58,10 +65,16 @@ class SeabotWaypoint():
 	def get_enable_thrusters(self):
 		return self.enable_thrusters
 
+	def get_seafloor_landing(self):
+		return self.seafloor_landing
+
 	def get_id(self):
 		return self.id
 
 class SeabotMission():
+
+	mean_east = 0.0
+	mean_north = 0.0
 
 	def __init__(self, filename=None):
 		self.waypoint_list = []
@@ -125,11 +138,16 @@ class SeabotMission():
 		root = tree.getroot()
 
 		child_offset = root.find("offset/start_time_utc")
-		self.start_time_utc = datetime.datetime(year=int(child_offset.find("year").text),
-									month=int(child_offset.find("month").text),
-									day=int(child_offset.find("day").text),
-									hour=int(child_offset.find("hour").text),
-									minute=int(child_offset.find("min").text))
+		datetime_now = datetime.datetime.now()
+		if(child_offset!=None):
+			self.start_time_utc = datetime.datetime(year=int(child_offset.find("year").text),
+										month=int(child_offset.find("month").text),
+										day=int(child_offset.find("day").text),
+										hour=int(child_offset.find("hour").text),
+										minute=int(child_offset.find("min").text))
+		else:
+			self.start_time_utc = datetime.datetime.now()
+
 		self.end_time = self.start_time_utc
 
 		paths = root.find("paths")
@@ -145,18 +163,19 @@ class SeabotMission():
 			self.parse_loop(child, depth_offset)
 
 	def parse_wy(self, wp, depth_offset=0.0):
-		duration = datetime.timedelta(seconds=float(wp.findtext("duration")))
+		duration = datetime.timedelta(seconds=float(wp.findtext("duration", default="0.0")))
 		time_start = self.end_time
 		self.end_time += duration
 		self.waypoint_list.append(SeabotWaypoint(time_start = time_start,
 											time_end = self.end_time,
 											duration=duration,
-											depth=float(wp.findtext("depth"))+depth_offset,
-											east=int(wp.findtext("east")),
-											north=int(wp.findtext("north")),
+											depth=float(wp.findtext("depth", default=0))+depth_offset,
+											east=int(wp.findtext("east", default=0)),
+											north=int(wp.findtext("north", default=0)),
 											limit_velocity=float(wp.findtext("limit_velocity", default="0.02")),
 											approach_velocity=float(wp.findtext("approach_velocity", default="1.0")),
-											enable_thrusters=True,
+											enable_thrusters=bool(wp.findtext("enable_thrusters", default="True")),
+											seafloor_landing=bool(wp.findtext("seafloor_landing", default="False")),
 											wp_id=len(self.waypoint_list)+1))
 
 	def parse_loop(self, l, depth_offset=0.0):
@@ -225,6 +244,20 @@ class SeabotMission():
 	def get_mission_name(self):
 		return self.filename # ToDo
 
+	def get_nb_wp(self):
+		return len(self.waypoint_list)
+
+	def compute_mean_position(self):
+		mean_east = 0.0
+		mean_north = 0.0
+
+		for wp in self.waypoint_list:
+			mean_east += wp.east
+			mean_north += wp.north
+		self.mean_east=mean_east/len(self.waypoint_list)
+		self.mean_north=mean_north/len(self.waypoint_list)
+
+		return self.mean_east, self.mean_north
 
 if __name__ == '__main__':
 	s_m = SeabotMission()

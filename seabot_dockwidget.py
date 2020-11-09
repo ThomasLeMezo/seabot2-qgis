@@ -46,7 +46,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     closingPlugin = pyqtSignal()
     send_mail_sleep = pyqtSignal(str, int)
     send_mail_parameters = pyqtSignal(str, bool, bool, bool, bool, int)
-    send_mail_mission = pyqtSignal(str, str)
+    send_mail_mission = pyqtSignal(str, object, bool)
 
     imap_signal_stop_server = pyqtSignal()
 
@@ -154,6 +154,10 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         self.dial_com_sleep_duration.valueChanged.connect(self.update_com_sleep_duration)
         self.dial_com_mission_message_period.valueChanged.connect(self.update_com_mission_message_period)
+        self.pushButton_com_mission_open.clicked.connect(self.com_open_mission)
+
+        # Iridium
+        self.mission_iridium_com = None
 
         # Fill list of email account
         self.update_server_list()
@@ -593,7 +597,8 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.send_mail_sleep.emit(str(self.comboBox_state_imei.currentData()), self.dial_com_sleep_duration.value())
 
     def send_com_mission(self):
-        return
+        if(self.comboBox_state_imei.currentIndex() != -1 and self.mission_iridium_com!=None):
+            self.send_mail_mission.emit(str(self.comboBox_state_imei.currentData()), self.mission_iridium_com, self.radioButton_com_mission_add.isChecked())
 
     def send_com_parameters(self):
         if(self.comboBox_state_imei.currentIndex() != -1):
@@ -626,3 +631,12 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         val_min = math.floor(val/60.)
         val_sec = val-val_min*60
         self.label_com_mission_message_period.setText("Message Period\n" + str(val_min) + "min " + str({}).format(int(val_sec)) + "s")
+
+    def com_open_mission(self, event):
+        filename, _ = QFileDialog.getOpenFileName(self,"Select mission file to send", "","Mission File (*.xml)")
+        print("filename=", filename)
+        self.mission_iridium_com = SeabotMission(filename)
+        self.label_com_mission_name.setText(self.mission_iridium_com.get_mission_name())
+        self.label_com_mission_nb_wp.setText(str(self.mission_iridium_com.get_nb_wp()))
+        self.label_com_mission_tstart.setText(str(self.mission_iridium_com.start_time_utc))
+        self.label_com_mission_tend.setText(str(self.mission_iridium_com.end_time))
