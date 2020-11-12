@@ -438,7 +438,7 @@ class IridiumMessageParser():
 			data, bit_position, _ = self.serialize_data(data, d_east, 15, bit_position) # Should be signed ! be carefull
 			data, bit_position, _ = self.serialize_data(data, d_north, 15, bit_position)
 		else:
-			depth = round(wp.depth/4.0) #25cm resolution
+			depth = round(wp.depth*4.0) #25cm resolution
 			data, bit_position, _ = self.serialize_data(data, depth, 11, bit_position)
 			data, bit_position, _ = self.serialize_data(data, wp.seafloor_landing, 1, bit_position)
 
@@ -467,11 +467,12 @@ class IridiumMessageParser():
 		L93_EAST_MAX  = 1300000
 		L93_NORTH_MIN = 6000000
 		L93_NORTH_MAX = 7200000
+		reduction_factor = 100.0
 
 		start_time = round((mission.start_time_utc.timestamp()-REF_POSIX_TIME)/60) # Starting near the minute
 		data, bit_position, _ = self.serialize_data(data, start_time,22, bit_position)
-		data, bit_position, mean_east_serialized = self.serialize_data(data, mean_east/100.0,15, bit_position, L93_EAST_MIN, L93_EAST_MAX)
-		data, bit_position, mean_north_serialized = self.serialize_data(data, mean_north/100.0,15, bit_position, L93_NORTH_MIN, L93_NORTH_MAX)
+		data, bit_position, mean_east_serialized = self.serialize_data(data, mean_east/reduction_factor,15, bit_position, L93_EAST_MIN/reduction_factor, L93_EAST_MAX/reduction_factor)
+		data, bit_position, mean_north_serialized = self.serialize_data(data, mean_north/reduction_factor,15, bit_position, L93_NORTH_MIN/reduction_factor, L93_NORTH_MAX/reduction_factor)
 
 		mean_east = mean_east_serialized*100.
 		mean_north = mean_north_serialized*100.

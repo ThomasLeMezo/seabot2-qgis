@@ -320,7 +320,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.pushButton_com_send_parameters.setEnabled(True)
             self.pushButton_com_send_mission.setEnabled(True)
 
-    def add_item_treeWidget(self, val1, val2=None, nb_digit=-1):
+    def add_item_treeWidget(self, val1, val2=None, nb_digit=-1, warning=False):
         item = None
         if(val2==None):
             text = self.data_log[val1]
@@ -333,6 +333,8 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             text = int(round(float(text)))
 
         item = QTreeWidgetItem([str(val1), str(text)])
+        if(warning):
+            item.setBackground(1, QBrush(Qt.red))
         self.treeWidget_iridium.addTopLevelItem(item)
 
     def fill_treeWidget_log_state(self):
@@ -341,25 +343,25 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             qtime = QDateTime.fromSecsSinceEpoch(self.data_log["ts"], Qt.UTC)
             self.add_item_treeWidget("message_id")
             self.add_item_treeWidget("ts", qtime.toString("dd/MM/yy hh:mm:ss"))
-            self.add_item_treeWidget("east", nb_digit=0)
-            self.add_item_treeWidget("north", nb_digit=0)
+            self.add_item_treeWidget("east", nb_digit=0, warning=(self.data_log["east"]<=100))
+            self.add_item_treeWidget("north", nb_digit=0, warning=(self.data_log["north"]<=6000100))
             self.add_item_treeWidget("gnss_speed", nb_digit=2)
             self.add_item_treeWidget("gnss_heading", nb_digit=0)
-            self.add_item_treeWidget("safety_published_frequency", nb_digit=0)
-            self.add_item_treeWidget("safety_depth_limit", nb_digit=0)
-            self.add_item_treeWidget("safety_batteries_limit", nb_digit=0)
-            self.add_item_treeWidget("safety_depressurization", nb_digit=0)
-            self.add_item_treeWidget("enable_mission", nb_digit=0)
-            self.add_item_treeWidget("enable_depth", nb_digit=0)
-            self.add_item_treeWidget("enable_engine", nb_digit=0)
-            self.add_item_treeWidget("enable_flash", nb_digit=0)
+            self.add_item_treeWidget("safety_published_frequency", nb_digit=0, warning=(self.data_log["safety_published_frequency"]>0))
+            self.add_item_treeWidget("safety_depth_limit", nb_digit=0, warning=(self.data_log["safety_depth_limit"]>0))
+            self.add_item_treeWidget("safety_batteries_limit", nb_digit=0, warning=(self.data_log["safety_batteries_limit"]>0))
+            self.add_item_treeWidget("safety_depressurization", nb_digit=0, warning=(self.data_log["safety_depressurization"]>0))
+            self.add_item_treeWidget("enable_mission", nb_digit=0, warning=(self.data_log["enable_mission"]<1))
+            self.add_item_treeWidget("enable_depth", nb_digit=0, warning=(self.data_log["enable_depth"]<1))
+            self.add_item_treeWidget("enable_engine", nb_digit=0, warning=(self.data_log["enable_engine"]<1))
+            self.add_item_treeWidget("enable_flash", nb_digit=0, warning=(self.data_log["enable_flash"]<1))
             self.add_item_treeWidget("battery0", nb_digit=2)
             self.add_item_treeWidget("battery1", nb_digit=2)
             self.add_item_treeWidget("battery2", nb_digit=2)
             self.add_item_treeWidget("battery3", nb_digit=2)
             self.add_item_treeWidget("pressure", nb_digit=0)
             self.add_item_treeWidget("temperature", nb_digit=1)
-            self.add_item_treeWidget("humidity", nb_digit=2)
+            self.add_item_treeWidget("humidity", nb_digit=2, warning=(self.data_log["humidity"]>50.0))
             self.add_item_treeWidget("waypoint", nb_digit=0)
             self.add_item_treeWidget("last_cmd_received")
 
