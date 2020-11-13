@@ -6,7 +6,7 @@ from PyQt5.QtCore import QFileInfo
 
 class SeabotWaypoint():
 
-	def __init__(self, wp_id ,time_end, time_start, duration, depth, east, north, limit_velocity, approach_velocity, enable_thrusters, seafloor_landing):
+	def __init__(self, wp_id ,time_end, time_start, duration, depth, east, north, limit_velocity, approach_velocity, enable_thrusters, seafloor_landing=False):
 		self.time_end = time_end
 		self.time_start = time_start
 		self.duration = duration
@@ -250,12 +250,17 @@ class SeabotMission():
 	def compute_mean_position(self):
 		mean_east = 0.0
 		mean_north = 0.0
+		nb_wp = 0
 
 		for wp in self.waypoint_list:
-			mean_east += wp.east
-			mean_north += wp.north
-		self.mean_east=mean_east/len(self.waypoint_list)
-		self.mean_north=mean_north/len(self.waypoint_list)
+			if(wp.depth==0.0 and wp.enable_thrusters):
+				mean_east += wp.east
+				mean_north += wp.north
+				nb_wp += 1
+		if(nb_wp==0):
+			return 0.0, 0.0
+		self.mean_east=mean_east/nb_wp
+		self.mean_north=mean_north/nb_wp
 
 		return self.mean_east, self.mean_north
 

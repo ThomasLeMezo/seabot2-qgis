@@ -637,8 +637,9 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def com_open_mission(self, event):
         filename, _ = QFileDialog.getOpenFileName(self,"Select mission file to send", "","Mission File (*.xml)")
         print("filename=", filename)
-        self.mission_iridium_com = SeabotMission(filename)
-        self.label_com_mission_name.setText(self.mission_iridium_com.get_mission_name())
-        self.label_com_mission_nb_wp.setText(str(self.mission_iridium_com.get_nb_wp()))
-        self.label_com_mission_tstart.setText(str(self.mission_iridium_com.start_time_utc))
-        self.label_com_mission_tend.setText(str(self.mission_iridium_com.end_time))
+        if(filename != ""):
+            self.mission_iridium_com = SeabotMission(filename)
+            self.label_com_mission_name.setText(self.mission_iridium_com.get_mission_name())
+            self.label_com_mission_nb_wp.setText(str(self.mission_iridium_com.get_nb_wp()))
+            self.label_com_mission_tstart.setText(str(self.mission_iridium_com.start_time_utc))
+            self.label_com_mission_tend.setText(str(self.mission_iridium_com.end_time))

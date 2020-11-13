@@ -12,7 +12,7 @@ import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
-from base64 import encodebytes
+import base64
 
 import time
 import calendar
@@ -76,19 +76,23 @@ class ImapServer(QObject):
 		parser = IridiumMessageParser(DataBaseConnection(init_table=False))
 		data = parser.serialize_cmd_sleep(duration)
 		print(data)
-		self.send_mail(imei, data, "sleep")
+		if parser.flag_msg_ok:
+			self.send_mail(imei, data, "sleep")
 		return
 
 	def send_mail_parameters(self, imei, enable_mission, enable_flash, enable_depth, enable_engine, period_message):
 		parser = IridiumMessageParser(DataBaseConnection(init_table=False))
 		data = parser.serialize_cmd_parameters(enable_mission, enable_flash, enable_depth, enable_engine, period_message)
 		print(data)
-		self.send_mail(imei, data, "parameters")
+		if parser.flag_msg_ok:
+			self.send_mail(imei, data, "parameters")
 		return
 
 	def send_mail_mission(self, imei, mission, keep_old_mission):
 		parser = IridiumMessageParser(DataBaseConnection(init_table=False))
 		data = parser.serialize_cmd_mission(mission, keep_old_mission)
+		if data==None:
+			return
 		print(data)
 		# Check the length of the message
 		if(len(data)>270 or mission.get_nb_wp()>256):
@@ -100,7 +104,8 @@ class ImapServer(QObject):
 			msgBox.exec()
 			return
 
-		self.send_mail(imei, data, "mission")
+		if parser.flag_msg_ok:
+			self.send_mail(imei, data, "mission")
 		return
 
 	def send_mail(self, imei, data, msg_info):
@@ -113,7 +118,7 @@ class ImapServer(QObject):
 			iridium_mtmsn = "000001"
 			filename = imei + "_" + iridium_mtmsn + ".sbd"
 
-			sbd_msg.set_payload(encodebytes(data))
+			sbd_msg.set_payload(base64.b64encode(data))
 			sbd_msg.add_header('Content-Disposition', 'attachment', filename=filename)
 			sbd_msg.add_header('Content-Transfer-Encoding', 'base64')
 
@@ -365,6 +370,8 @@ class IridiumMessageParser():
 	message = None
 	db = None
 	CMD_MSG_TYPE = {"LOG_STATE":0, "CMD_SLEEP":1, "CMD_PARAMETERS":2, "CMD_MISSION_NEW":3, "CMD_MISSION_KEEP":4}
+	flag_msg_ok = True
+	wp_id = 0
 
 	def __init__(self, message_string, db, message_id, send_time):
 		self.message = int.from_bytes(message_string, byteorder='little', signed=False)
@@ -384,19 +391,23 @@ class IridiumMessageParser():
 
 	def serialize_data(self, data, val, nb_bit, start_bit, value_min=None, value_max=None):
 		if(value_min!=None and value_max!=None):
-			scale = (value_max-value_min)/(1<<nb_bit-1)
-			val=val*scale+value_min
-			val=int(round((val-value_min)/scale))
+			scale = ((1<<nb_bit)-1)/(value_max-value_min)
+			print(val)
+			val=int(round((val-value_min)*scale))
+			print(val)
+		else:
+			value_min = 0.0
+			scale = 1.0
 		mask = ((1<<nb_bit)-1) << start_bit
-		data = data | (mask & val<<start_bit)
-		return data, nb_bit+start_bit, val
+		data = data | (mask & (val<<start_bit))
+		return data, nb_bit+start_bit, val/scale+value_min
 
 	def deserialize_data(self, data, nb_bit, start_bit, value_min=None, value_max=None):
 		mask = ((1<<nb_bit)-1) << start_bit
 		v = (data & mask)>>start_bit
 		if(value_min!=None and value_max!=None):
-			scale = (value_max-value_min)/(1<<nb_bit-1)
-			v=v*scale+value_min
+			scale = ((1<<nb_bit)-1)/(value_max-value_min)
+			v=v/scale+value_min
 		return v, start_bit+nb_bit
 
 	def serialize_cmd_parameters(self, enable_mission=True, enable_flash=True, enable_depth=True, enable_engine=True, period_message=60):
@@ -408,17 +419,17 @@ class IridiumMessageParser():
 		data, bit_position, _ = self.serialize_data(data, enable_depth,1, bit_position)
 		data, bit_position, _ = self.serialize_data(data, enable_engine,1, bit_position)
 		data, bit_position, _ = self.serialize_data(data, period_message,8, bit_position)
-		return data.to_bytes(int(bit_position/8), byteorder='big')
+		return data.to_bytes(int(bit_position/8), byteorder='little')
 
 	def serialize_cmd_sleep(self, duration=0):
 		bit_position = 0
 		data = 0b0
 		data, bit_position, _ = self.serialize_data(data, self.CMD_MSG_TYPE["CMD_SLEEP"],4, bit_position)
 		data, bit_position, _ = self.serialize_data(data, duration,12, bit_position)
-		return data.to_bytes(int(bit_position/8), byteorder='big')
+		return data.to_bytes(int(bit_position/8), byteorder='little')
 
 	def serialize_cmd_mission_wp(self, data, wp, bit_position, mean_east, mean_north):
-
+		self.wp_id+=1
 		data, bit_position, _ = self.serialize_data(data, wp.enable_thrusters, 1, bit_position)
 
 		# Duration : 0 to 256min
@@ -431,10 +442,12 @@ class IridiumMessageParser():
 			if(abs(d_east)>2**14 or abs(d_north)>2**14 or duration>2**8):
 				msgBox = QMessageBox()
 				msgBox.setIcon(QMessageBox.Warning)
-				msgBox.setText("wp is out of bounds (65km, 256min): " + str(d_east*4) + " " + str(d_north*4) + " " + str(duration))
+				msgBox.setText("wp " + str(self.wp_id) + " is out of bounds (65km, 256min): " + str(d_east*4) + " " + str(d_north*4) + " " + str(duration))
 				msgBox.setWindowTitle("Seabot")
 				msgBox.setStandardButtons(QMessageBox.Ok)
 				msgBox.exec()
+				self.flag_msg_ok = False
+				return None, None
 			data, bit_position, _ = self.serialize_data(data, d_east, 15, bit_position) # Should be signed ! be carefull
 			data, bit_position, _ = self.serialize_data(data, d_north, 15, bit_position)
 		else:
@@ -463,30 +476,42 @@ class IridiumMessageParser():
 		mean_east, mean_north = mission.compute_mean_position()
 
 		REF_POSIX_TIME = 1604874973 #To be update every 5 years !
-		L93_EAST_MIN = 0
-		L93_EAST_MAX  = 1300000
-		L93_NORTH_MIN = 6000000
-		L93_NORTH_MAX = 7200000
-		reduction_factor = 100.0
+		L93_EAST_MIN = 0.0
+		L93_EAST_MAX  = 1300000.0
+		L93_NORTH_MIN = 6000000.0
+		L93_NORTH_MAX = 7200000.0
 
-		start_time = round((mission.start_time_utc.timestamp()-REF_POSIX_TIME)/60) # Starting near the minute
+		time_posix = mission.start_time_utc.replace(tzinfo=datetime.timezone.utc).timestamp()
+		print("mission start_time_utc", time_posix)
+
+		start_time = round((time_posix-REF_POSIX_TIME)/60) # Starting near the minute
+
+		if(start_time<=0 or start_time>2**22-1):
+			msgBox = QMessageBox()
+			msgBox.setIcon(QMessageBox.Warning)
+			msgBox.setText("Time is out of bounds : " + str(start_time))
+			msgBox.setWindowTitle("Seabot")
+			msgBox.setStandardButtons(QMessageBox.Ok)
+			msgBox.exec()
+			self.flag_msg_ok = False
+
 		data, bit_position, _ = self.serialize_data(data, start_time,22, bit_position)
-		data, bit_position, mean_east_serialized = self.serialize_data(data, mean_east/reduction_factor,15, bit_position, L93_EAST_MIN/reduction_factor, L93_EAST_MAX/reduction_factor)
-		data, bit_position, mean_north_serialized = self.serialize_data(data, mean_north/reduction_factor,15, bit_position, L93_NORTH_MIN/reduction_factor, L93_NORTH_MAX/reduction_factor)
+		data, bit_position, mean_east_serialized = self.serialize_data(data, mean_east,15, bit_position, L93_EAST_MIN, L93_EAST_MAX)
+		data, bit_position, mean_north_serialized = self.serialize_data(data, mean_north,15, bit_position, L93_NORTH_MIN, L93_NORTH_MAX)
 
-		mean_east = mean_east_serialized*100.
-		mean_north = mean_north_serialized*100.
-		print("mean = ",mean_east, mean_north, start_time)
+		print("mean_serialized = ",mean_east_serialized, mean_north_serialized, start_time)
 		### Header size is 64 (8*8): 4+8+22+15+15
 
 		# -----------------------------------------
 		# WP
 		for wp in mission.get_wp_list():
-			data, bit_position = self.serialize_cmd_mission_wp(data, wp, bit_position, mean_east, mean_north)
+			data, bit_position = self.serialize_cmd_mission_wp(data, wp, bit_position, mean_east_serialized, mean_north_serialized)
+			if not self.flag_msg_ok:
+				return None
 
 		# ---------------------------------
 
-		return data.to_bytes(int(bit_position/8), byteorder='big')
+		return data.to_bytes(int(bit_position/8), byteorder='little')
 
 	def deserialize_log_state(self, data, send_time):
 		bit_position = 0
