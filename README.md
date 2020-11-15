@@ -4,7 +4,7 @@
 
 ### Dependencies
 ```
-python3 -m pip install oyaml gps --user
+python3 -m pip install oyaml gps gpxpy --user
 sudo apt install gpsd
 ```
 ### QGIS plugin setup

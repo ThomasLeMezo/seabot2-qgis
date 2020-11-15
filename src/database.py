@@ -60,6 +60,7 @@ class DataBaseConnection():
 									`message_id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 									`IMEI`	NUMERIC NOT NULL,
 									`momsn`	NUMERIC NOT NULL,
+									`mtmsn`	NUMERIC NOT NULL,
 									`time_connection` DATETIME NOT NULL,
 									FOREIGN KEY(`IMEI`) REFERENCES ROBOTS (`IMEI`)
 							)'''
@@ -237,18 +238,18 @@ class DataBaseConnection():
 		except sqlite3.Error as error:
 			print("Error while connecting to sqlite", error)
 
-	def add_sbd_received(self, imei, momsn, time_connection):
+	def add_sbd_received(self, imei, momsn, mtmsn, time_connection):
 		try:
-			self.sqliteCursor.execute("SELECT COUNT(1) from SBD_RECEIVED WHERE IMEI= ? and momsn=? and time_connection=?", [imei, momsn,time_connection])
+			self.sqliteCursor.execute("SELECT COUNT(1) from SBD_RECEIVED WHERE IMEI= ? and momsn=? and mtmsn=? and time_connection=?", [imei, momsn, mtmsn,time_connection])
 			row = self.sqliteCursor.fetchone()
 			if(row[0]==0):
-				self.sqliteCursor.execute("INSERT INTO SBD_RECEIVED (IMEI, momsn, time_connection) VALUES (?, ?, ?)", [imei, momsn, time_connection])
+				self.sqliteCursor.execute("INSERT INTO SBD_RECEIVED (IMEI, momsn, mtmsn, time_connection) VALUES (?, ?, ?, ?)", [imei, momsn, mtmsn, time_connection])
 				self.sqliteConnection.commit()
 				return self.sqliteCursor.lastrowid
 			else:
 				return None
 		except sqlite3.Error as error:
-			print("Error while connecting to sqlite", error)
+			print("Error while connecting to sqlite (add_sbd_received)", error)
 
 	def fill_data_log_state(self, row):
 		data = {}

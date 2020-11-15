@@ -58,7 +58,6 @@ class ImapServer(QObject):
 		self.db = DataBaseConnection(init_table=True)
 		self.locale = QLocale(QLocale.English, QLocale.UnitedStates)
 		self.start_sync = None
-		self.last_mail_datetime = None
 
 		send_mail_sleep.connect(self.send_mail_sleep)
 		send_mail_parameters.connect(self.send_mail_parameters)
@@ -139,8 +138,7 @@ class ImapServer(QObject):
 
 			sbd_msg = MIMEBase("application", "octet-stream") # x-zip-compressed
 
-			iridium_mtmsn = "000001"
-			filename = imei + "_" + iridium_mtmsn + ".sbd"
+			filename = imei + "_" + msg_info + ".sbd"
 
 			sbd_msg.set_payload(base64.b64encode(data))
 			sbd_msg.add_header('Content-Disposition', 'attachment', filename=filename)
@@ -346,6 +344,7 @@ class ImapServer(QObject):
 		print("Download msg ", msgnum)
 		try:
 			typ, data_msg = self.serverIMAP.fetch(msgnum, '(BODY.PEEK[])')
+
 		except imaplib.IMAP4.error as err:
 			self.close_server()
 			self.imap_signal_log.emit("Error IMAP")
@@ -357,60 +356,74 @@ class ImapServer(QObject):
 
 		if(mail["From"]=="sbdservice@sbd.iridium.com"):
 			# imei = mail["Subject"].split(": ")[1]
+
+			# Determine type of mail
+			sbd_received = mail["Subject"].startswith('SBD Msg From Unit: ')
+			sbd_emitted = mail["Subject"].startswith('SBD Mobile Terminated Message Queued for Unit: ')
+
 			print(mail["Subject"])
-			imei = re.search("SBD (.*): (.*)",mail["Subject"]).group(2)
+			imei = re.search("Unit: (.*)",mail["Subject"]).group(1)
 			time_connection = calendar.timegm(parsedate(mail["Date"]))
 
-			# Check timed received
-			mail_datetime = QDateTime.fromString(mail["Date"], Qt.RFC2822Date)
-			# if(self.last_mail_datetime>=mail_datetime):
-			# 	print("Before last mail datetime")
-			# 	return True
+			if(sbd_received):
+				return self.process_received_sbd(imei, mail, time_connection)
 
-			if mail.get_content_maintype() != 'multipart':
-				print("No attachment")
-				return True
+			if(sbd_emitted):
+				return self.process_emitted_sbd(imei, mail, time_connection)
 
-			self.db.add_new_robot(imei) # Add new robot if not existing
-			## Extract enclosed file
-			for part in mail.iter_attachments():
-				if part.get_content_maintype() == 'application':
-					#print(part.get_content_maintype(), part.get_content_subtype())
-					# Extract momsn from attached file
-					print(part.get_filename())
-					momsn = int(re.search("_(.*)\.", part.get_filename()).group(1))
+		return True
 
-					# Add new entry to the database with the association of the imei and momsn
-					message_id = self.db.add_sbd_received(imei, momsn, time_connection)
+	def process_received_sbd(self, imei, mail, time_connection):
+		if mail.get_content_maintype() != 'multipart':
+			print("No attachment")
+			return True
 
-					# Test if message is already saved
-					if(message_id != None):
-						msg_data = part.get_payload(decode=True)
-						IridiumMessageParser(msg_data, self.db, message_id, time_connection)
+		self.db.add_new_robot(imei) # Add new robot if not existing
+
+		mail_message = mail.get_body('plain').get_content()
+		momsn = int(re.search("MOMSN: (.*)", mail_message).group(1))
+		mtmsn = int(re.search("MTMSN: (.*)", mail_message).group(1))
+		print("momsn =", momsn, "mtmsn =", mtmsn)
+
+		## Extract enclosed file
+		for part in mail.iter_attachments():
+			if part.get_content_maintype() == 'application':
+				#print(part.get_content_maintype(), part.get_content_subtype())
+				# Extract momsn from attached file
+				print(part.get_filename())
+
+				# Add new entry to the database with the association of the imei and momsn
+				message_id = self.db.add_sbd_received(imei, momsn, mtmsn, time_connection)
+
+				# Test if message is already saved
+				if(message_id != None):
+					msg_data = part.get_payload(decode=True)
+					ip = IridiumMessageParser(self.db)
+					ip.save_log_state(msg_data, message_id, time_connection)
+		return True
+
+	def process_emitted_sbd(self, imei, mail, time_connection):
 		return True
 
 class IridiumMessageParser():
 	message_type = 0
-	message = None
 	db = None
 	CMD_MSG_TYPE = {"LOG_STATE":0, "CMD_SLEEP":1, "CMD_PARAMETERS":2, "CMD_MISSION_NEW":3, "CMD_MISSION_KEEP":4}
 	flag_msg_ok = True
 	wp_id = 0
 
-	def __init__(self, message_string, db, message_id, send_time):
-		self.message = int.from_bytes(message_string, byteorder='little', signed=False)
-		self.db = db
-		# self.message_type = message_string[-1] & 0x0F
-		# Test type of message
-
-		## Assume
-		self.save_log_state(message_id, send_time)
+	L93_EAST_MIN = 0.0
+	L93_EAST_MAX  = 1300000.0
+	L93_NORTH_MIN = 6000000.0
+	L93_NORTH_MAX = 7200000.0
+	REF_POSIX_TIME = 1604874973 #To be update every 5 years !
 
 	def __init__(self, db):
 		self.db = db
 
-	def save_log_state(self, message_id, send_time):
-		message_data = self.deserialize_log_state(self.message, send_time)
+	def save_log_state(self, message_string, message_id, send_time):
+		message = int.from_bytes(message_string, byteorder='little', signed=False)
+		message_data = self.deserialize_log_state(message, send_time)
 		self.db.add_sbd_log_state(message_id, message_data)
 
 	def serialize_data(self, data, val, nb_bit, start_bit, value_min=None, value_max=None):
@@ -497,16 +510,10 @@ class IridiumMessageParser():
 		# Head info
 		mean_east, mean_north = mission.compute_mean_position()
 
-		REF_POSIX_TIME = 1604874973 #To be update every 5 years !
-		L93_EAST_MIN = 0.0
-		L93_EAST_MAX  = 1300000.0
-		L93_NORTH_MIN = 6000000.0
-		L93_NORTH_MAX = 7200000.0
-
 		time_posix = mission.start_time_utc.replace(tzinfo=datetime.timezone.utc).timestamp()
 		print("mission start_time_utc", time_posix)
 
-		start_time = round((time_posix-REF_POSIX_TIME)/60) # Starting near the minute
+		start_time = round((time_posix-self.REF_POSIX_TIME)/60) # Starting near the minute
 
 		if(start_time<=0 or start_time>2**22-1):
 			msgBox = QMessageBox()
@@ -518,8 +525,8 @@ class IridiumMessageParser():
 			self.flag_msg_ok = False
 
 		data, bit_position, _ = self.serialize_data(data, start_time,22, bit_position)
-		data, bit_position, mean_east_serialized = self.serialize_data(data, mean_east,15, bit_position, L93_EAST_MIN, L93_EAST_MAX)
-		data, bit_position, mean_north_serialized = self.serialize_data(data, mean_north,15, bit_position, L93_NORTH_MIN, L93_NORTH_MAX)
+		data, bit_position, mean_east_serialized = self.serialize_data(data, mean_east,15, bit_position, self.L93_EAST_MIN, self.L93_EAST_MAX)
+		data, bit_position, mean_north_serialized = self.serialize_data(data, mean_north,15, bit_position, self.L93_NORTH_MIN, self.L93_NORTH_MAX)
 
 		print("mean_serialized = ",mean_east_serialized, mean_north_serialized, start_time)
 		### Header size is 64 (8*8): 4+8+22+15+15
@@ -547,13 +554,13 @@ class IridiumMessageParser():
 
 		fields["ts"] = send_time
 
-		fields["east"], bit_position = self.deserialize_data(data, 21, bit_position, 0, 1300000)
-		fields["north"], bit_position = self.deserialize_data(data, 21, bit_position, 6000000, 7200000)
+		fields["east"], bit_position = self.deserialize_data(data, 21, bit_position, self.L93_EAST_MIN, self.L93_EAST_MAX)
+		fields["north"], bit_position = self.deserialize_data(data, 21, bit_position, self.L93_NORTH_MIN, self.L93_NORTH_MAX)
 		fields["gnss_speed"], bit_position = self.deserialize_data(data, 8, bit_position, 0, 5.0)
 		fields["gnss_heading"], bit_position = self.deserialize_data(data, 8, bit_position, 0, 359.0)
 
 		safety, bit_position = self.deserialize_data(data, 8, bit_position)
-		safety = round(safety)
+		safety = int(safety)
 		fields["safety_published_frequency"] = (safety >>0) & 0b1
 		fields["safety_depth_limit"] = (safety >>1) & 0b1
 		fields["safety_batteries_limit"] = (safety >>2) & 0b1
@@ -563,10 +570,10 @@ class IridiumMessageParser():
 		fields["enable_engine"] = (safety >>6) & 0b1
 		fields["enable_flash"] = (safety >>7) & 0b1
 
-		fields["battery0"], bit_position = self.deserialize_data(data, 5, bit_position, 9, 12.4)
-		fields["battery1"], bit_position = self.deserialize_data(data, 5, bit_position, 9, 12.4)
-		fields["battery2"], bit_position = self.deserialize_data(data, 5, bit_position, 9, 12.4)
-		fields["battery3"], bit_position = self.deserialize_data(data, 5, bit_position, 9, 12.4)
+		fields["battery0"], bit_position = self.deserialize_data(data, 5, bit_position, 9.0, 12.4)
+		fields["battery1"], bit_position = self.deserialize_data(data, 5, bit_position, 9.0, 12.4)
+		fields["battery2"], bit_position = self.deserialize_data(data, 5, bit_position, 9.0, 12.4)
+		fields["battery3"], bit_position = self.deserialize_data(data, 5, bit_position, 9.0, 12.4)
 
 		fields["pressure"], bit_position = self.deserialize_data(data, 6, bit_position, 680.0, 800.0)
 		fields["temperature"], bit_position = self.deserialize_data(data, 6, bit_position, 8.0, 50.0)
