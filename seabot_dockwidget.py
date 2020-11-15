@@ -47,6 +47,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     send_mail_sleep = pyqtSignal(str, int)
     send_mail_parameters = pyqtSignal(str, bool, bool, bool, bool, int)
     send_mail_mission = pyqtSignal(str, object, bool)
+    test_mission_signal = pyqtSignal(str, object, bool)
 
     imap_signal_stop_server = pyqtSignal()
 
@@ -82,7 +83,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         # DB
         self.db = DataBaseConnection()
-        self.imapServer = ImapServer(self.send_mail_sleep, self.send_mail_parameters, self.send_mail_mission, self.imap_signal_stop_server)
+        self.imapServer = ImapServer(self.send_mail_sleep, self.send_mail_parameters, self.send_mail_mission, self.imap_signal_stop_server, self.test_mission_signal)
         self.mission_selected = -1
         self.mission_selected_last = -2
 
@@ -151,6 +152,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.pushButton_com_send_sleep.clicked.connect(self.send_com_sleep)
         self.pushButton_com_send_mission.clicked.connect(self.send_com_mission)
         self.pushButton_com_send_parameters.clicked.connect(self.send_com_parameters)
+        self.pushButton_test_send_mission.clicked.connect(self.test_com_mission)
 
         self.dial_com_sleep_duration.valueChanged.connect(self.update_com_sleep_duration)
         self.dial_com_mission_message_period.valueChanged.connect(self.update_com_mission_message_period)
@@ -601,6 +603,11 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def send_com_mission(self):
         if(self.comboBox_state_imei.currentIndex() != -1 and self.mission_iridium_com!=None):
             self.send_mail_mission.emit(str(self.comboBox_state_imei.currentData()), self.mission_iridium_com, self.radioButton_com_mission_add.isChecked())
+
+    def test_com_mission(self):
+        if(self.comboBox_state_imei.currentIndex() != -1 and self.mission_iridium_com!=None):
+            self.test_mission_signal.emit(str(self.comboBox_state_imei.currentData()), self.mission_iridium_com, self.radioButton_com_mission_add.isChecked())
+
 
     def send_com_parameters(self):
         if(self.comboBox_state_imei.currentIndex() != -1):

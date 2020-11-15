@@ -2,6 +2,7 @@ import imaplib
 import time
 import os
 import math
+from os.path import expanduser
 
 import email
 from email.policy import default
@@ -44,7 +45,7 @@ class ImapServer(QObject):
 	imap_status_next_connection = pyqtSignal(int)
 	imap_update_dt = 5 # in sec
 
-	def __init__(self, send_mail_sleep, send_mail_parameters, send_mail_mission, imap_signal_stop_server):
+	def __init__(self, send_mail_sleep, send_mail_parameters, send_mail_mission, imap_signal_stop_server, test_send_mission=None):
 		super().__init__()
 		self.serverIMAP = None
 		self.mailbox = 'INBOX'
@@ -61,9 +62,12 @@ class ImapServer(QObject):
 
 		send_mail_sleep.connect(self.send_mail_sleep)
 		send_mail_parameters.connect(self.send_mail_parameters)
-		send_mail_mission.connect(self.send_mail_mission)
+
+		if(test_send_mission != None):
+			send_mail_mission.connect(self.send_mail_mission)
 
 		imap_signal_stop_server.connect(self.stop_server)
+		test_send_mission.connect(self.test_mission_file)
 
 	def __del__(self):
 		# with self.lock:
@@ -88,12 +92,32 @@ class ImapServer(QObject):
 			self.send_mail(imei, data, "parameters")
 		return
 
+	def test_mission_file(self, imei, mission, keep_old_mission):
+		parser = IridiumMessageParser(DataBaseConnection(init_table=False))
+		data = parser.serialize_cmd_mission(mission, keep_old_mission)
+		if data==None:
+			return
+		print(data)
+		if(len(data)>270 or mission.get_nb_wp()>256):
+			msgBox = QMessageBox()
+			msgBox.setIcon(QMessageBox.Warning)
+			msgBox.setText("Mission is too heavy "+str(len(data))+ "/270bytes " + str(mission.get_nb_wp())+"/256 wp")
+			msgBox.setWindowTitle("Seabot")
+			msgBox.setStandardButtons(QMessageBox.Ok)
+			msgBox.exec()
+			return
+		debug_path = expanduser("~")+'/sbd_message.sbd'
+		local_file_sbd = open(debug_path,'wb')
+		local_file_sbd.write(data)
+		local_file_sbd.close()
+
 	def send_mail_mission(self, imei, mission, keep_old_mission):
 		parser = IridiumMessageParser(DataBaseConnection(init_table=False))
 		data = parser.serialize_cmd_mission(mission, keep_old_mission)
 		if data==None:
 			return
 		print(data)
+
 		# Check the length of the message
 		if(len(data)>270 or mission.get_nb_wp()>256):
 			msgBox = QMessageBox()
@@ -392,9 +416,7 @@ class IridiumMessageParser():
 	def serialize_data(self, data, val, nb_bit, start_bit, value_min=None, value_max=None):
 		if(value_min!=None and value_max!=None):
 			scale = ((1<<nb_bit)-1)/(value_max-value_min)
-			print(val)
 			val=int(round((val-value_min)*scale))
-			print(val)
 		else:
 			value_min = 0.0
 			scale = 1.0
