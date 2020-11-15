@@ -16,7 +16,7 @@ class SeabotWaypoint():
 		self.limit_velocity = limit_velocity
 		self.approach_velocity = approach_velocity
 
-		if(east==0 and north==0):
+		if(east==0.0 and north==0.0):
 			self.enable_thrusters = False
 		else:
 			self.enable_thrusters = True
@@ -138,7 +138,6 @@ class SeabotMission():
 		root = tree.getroot()
 
 		child_offset = root.find("offset/start_time_utc")
-		datetime_now = datetime.datetime.now()
 		if(child_offset!=None):
 			self.start_time_utc = datetime.datetime(year=int(child_offset.find("year").text),
 										month=int(child_offset.find("month").text),
@@ -146,6 +145,7 @@ class SeabotMission():
 										hour=int(child_offset.find("hour").text),
 										minute=int(child_offset.find("min").text))
 		else:
+			print("No start time UTC found in mission file")
 			self.start_time_utc = datetime.datetime.now()
 
 		self.end_time = self.start_time_utc
@@ -169,9 +169,9 @@ class SeabotMission():
 		self.waypoint_list.append(SeabotWaypoint(time_start = time_start,
 											time_end = self.end_time,
 											duration=duration,
-											depth=float(wp.findtext("depth", default=0))+depth_offset,
-											east=int(wp.findtext("east", default=0)),
-											north=int(wp.findtext("north", default=0)),
+											depth=float(wp.findtext("depth", default=0.0))+depth_offset,
+											east=float(wp.findtext("east", default=0.0)),
+											north=float(wp.findtext("north", default=0.0)),
 											limit_velocity=float(wp.findtext("limit_velocity", default="0.02")),
 											approach_velocity=float(wp.findtext("approach_velocity", default="1.0")),
 											enable_thrusters=bool(wp.findtext("enable_thrusters", default="True")),

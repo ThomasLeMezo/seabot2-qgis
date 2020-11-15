@@ -537,6 +537,16 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 layerMission.update_mission_pose()
             self.update_mission_ui()
 
+    def chop_microseconds(self, delta):
+        dt = delta - datetime.timedelta(microseconds=delta.microseconds)
+        nb_seconds = dt.days*3600.0*24.0+dt.seconds
+        r, sec = divmod(int(abs(nb_seconds)), 60)
+        hour, min = divmod(r, 60)
+        if(nb_seconds <0):
+            return "-"+str(hour).zfill(2)+":"+str(min).zfill(2)+":"+str(sec).zfill(2)
+        else:
+            return str(hour).zfill(2)+":"+str(min).zfill(2)+":"+str(sec).zfill(2)
+
     def update_mission_ui(self):
         if self.mission_selected != -1:
             seabotMission = self.layerMissions[self.mission_selected].get_mission()
@@ -551,11 +561,11 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                     self.label_mission_status.setText("UNDERWATER")
                     self.label_mission_status.setStyleSheet("background-color: red")
 
-                self.label_mission_start_time.setText(str(wp.get_time_start()))
-                self.label_mission_end_time.setText(str(wp.get_time_end()))
+                self.label_mission_start_time.setText(str(wp.get_time_start().replace(microsecond=0)))
+                self.label_mission_end_time.setText(str(wp.get_time_end().replace(microsecond=0)))
                 self.label_mission_depth.setText(str(wp.get_depth()))
                 self.label_mission_waypoint_id.setText(str(wp.get_id())+"/"+str(seabotMission.get_nb_wp()))
-                self.label_mission_time_remain.setText(str(wp.get_time_end()-datetime.datetime.utcnow().replace(microsecond=0)))
+                self.label_mission_time_remain.setText(self.chop_microseconds(wp.get_time_end()-datetime.datetime.utcnow()))
 
                 wp_next = seabotMission.get_next_wp()
                 if(wp_next != None):
@@ -568,14 +578,14 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
 
             # Update Table widget
-            if(self.mission_selected_last != self.mission_selected):
-                wp_list = seabotMission.get_wp_list()
-                self.tableWidget_mission.clearContents()
-                self.tableWidget_mission.setRowCount(len(wp_list))
-                row = 0
-                for wp in wp_list:
-                    self.tableWidget_add_waypoint(wp, row)
-                    row+=1
+            # if(self.mission_selected_last != self.mission_selected):
+            wp_list = seabotMission.get_wp_list()
+            self.tableWidget_mission.clearContents()
+            self.tableWidget_mission.setRowCount(len(wp_list))
+            row = 0
+            for wp in wp_list:
+                self.tableWidget_add_waypoint(wp, row)
+                row+=1
         else:
             self.label_mission_status.setStyleSheet("background-color: gray")
             self.label_mission_start_time.setText("-")
@@ -589,12 +599,27 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.mission_selected_last = self.mission_selected
 
     def tableWidget_add_waypoint(self, wp, row):
-        time_now = datetime.datetime.utcnow().replace(microsecond=0)
-        self.tableWidget_mission.setItem(row, 0, QTableWidgetItem(str(wp.get_depth())))
-        self.tableWidget_mission.setItem(row, 1, QTableWidgetItem(str(wp.get_time_end()-time_now)))
-        self.tableWidget_mission.setItem(row, 2, QTableWidgetItem(str(wp.get_time_start()-time_now)))
-        self.tableWidget_mission.setItem(row, 3, QTableWidgetItem(str(wp.get_time_start())))
-        self.tableWidget_mission.setItem(row, 4, QTableWidgetItem(str(wp.get_time_end())))
+        time_now = datetime.datetime.utcnow()
+        list_item = []
+        list_item.append(QTableWidgetItem(str(wp.get_depth())))
+        list_item.append(QTableWidgetItem(self.chop_microseconds(wp.get_time_start()-time_now)))
+        list_item.append(QTableWidgetItem(self.chop_microseconds(wp.get_time_end()-time_now)))
+        list_item.append(QTableWidgetItem(str(wp.get_time_start().replace(microsecond=0))))
+        list_item.append(QTableWidgetItem(str(wp.get_time_end().replace(microsecond=0))))
+
+        current_wp = False
+        old_wp = False
+        if(wp.get_time_start()<=datetime.datetime.utcnow() and wp.get_time_end()>=datetime.datetime.utcnow()):
+            current_wp = True
+        elif(wp.get_time_start()<=datetime.datetime.utcnow()):
+            old_wp = True
+
+        for i, item in enumerate(list_item):
+            if(current_wp):
+                item.setBackground(QBrush(Qt.green))
+            elif(old_wp):
+                item.setBackground(QBrush(Qt.gray))
+            self.tableWidget_mission.setItem(row, i, item)
 
     def send_com_sleep(self):
         if(self.comboBox_state_imei.currentIndex() != -1):
