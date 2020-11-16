@@ -9,7 +9,7 @@ class DataBaseConnection():
 
 	db_file = expanduser("~") + "/.local/share/QGIS/QGIS3/profiles/default/python/plugins/seabot/" + "Seabot_iridium.db"
 
-	sqlite_tables_name = ["ROBOTS", "SBD_LOG_STATE", "CONFIG", "SBD_RECEIVED"]
+	sqlite_tables_name = ["ROBOTS", "SBD_LOG_STATE", "CONFIG", "SBD_RECEIVED", "SBD_SENT"]
 	sqlite_create_table = ['''CREATE TABLE "'''+sqlite_tables_name[0]+'''" (
 										`IMEI`	NUMERIC NOT NULL,
 										`NAME`	TEXT,
@@ -63,10 +63,26 @@ class DataBaseConnection():
 									`mtmsn`	NUMERIC NOT NULL,
 									`time_connection` DATETIME NOT NULL,
 									FOREIGN KEY(`IMEI`) REFERENCES ROBOTS (`IMEI`)
+							)''',
+							'''CREATE TABLE "'''+sqlite_tables_name[4]+'''" (
+									`message_id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+									`type` NUMERIC,
+									`IMEI`	NUMERIC NOT NULL,
+									`mtmsn`	NUMERIC,
+									`queue`	NUMERIC,
+									`filename`	TEXT NOT NULL,
+									`data` BLOB,
+									`time_sent` DATETIME,
+									`time_queue` DATETIME,
+									`time_received` DATETIME,
+									`status` NUMERIC NOT NULL,
+									FOREIGN KEY(`IMEI`) REFERENCES ROBOTS (`IMEI`)
 							)'''
 							]
 
 	sqlite_create_table_get_table = '''SELECT name FROM sqlite_master WHERE type='table' and name NOT LIKE 'sqlite_%';'''
+
+	SBD_SENT_STATUS = {"SENT_TO_ICU":0, "RECEIVED_BY_ICU":1, "RECEIVED_BY_ROBOT":2}
 
 	def __init__(self, credential_file=None, init_table=True):
 		self.sqliteConnection = None
@@ -235,6 +251,71 @@ class DataBaseConnection():
 				return False
 			else:
 				return True
+		except sqlite3.Error as error:
+			print("Error while connecting to sqlite", error)
+
+	def add_sbd_sent_to_icu(self, imei, filename, type, data, time_sent):
+		try:
+			self.sqliteCursor.execute("SELECT COUNT(1) from SBD_SENT WHERE IMEI=(?) and filename=?", [imei,filename])
+			row = self.sqliteCursor.fetchone()
+			if(row[0]==0):
+				self.sqliteCursor.execute("INSERT INTO SBD_SENT (IMEI, FILENAME, TYPE, DATA, STATUS, TIME_SENT) VALUES (?, ?, ?, ?, ?, ?)", [imei, filename, type, data, self.SBD_SENT_STATUS["SENT_TO_ICU"], time_sent])
+				self.sqliteConnection.commit()
+				return False
+			else:
+				return True
+		except sqlite3.Error as error:
+			print("Error while connecting to sqlite", error)
+
+	def update_sbd_received_by_icu(self, imei, filename, mtmsn, queue, time_queue):
+		try:
+			self.sqliteCursor.execute("SELECT COUNT(1) from SBD_SENT WHERE IMEI=(?) and filename=?", [imei,filename])
+			row = self.sqliteCursor.fetchone()
+			if(row[0]==0):
+				self.sqliteCursor.execute("INSERT INTO SBD_SENT (mtmsn, queue, time_queue, status, imei, filename) VALUES (?, ?, ?, ?, ?, ?)", [mtmsn, queue, time_queue, self.SBD_SENT_STATUS["RECEIVED_BY_ICU"], imei, filename])
+				self.sqliteConnection.commit()
+				return False
+			else:
+				self.sqliteCursor.execute("UPDATE SBD_SENT SET mtmsn = ?, queue = ?, time_queue = ?, status=?  WHERE imei= ? and filename = ?", [mtmsn, queue, time_queue, self.SBD_SENT_STATUS["RECEIVED_BY_ICU"], imei, filename])
+				self.sqliteConnection.commit()
+				return True
+		except sqlite3.Error as error:
+			print("Error while connecting to sqlite", error)
+
+	def get_sbd_sent(self, imei):
+		try:
+			self.sqliteCursor.execute('''SELECT type, status, mtmsn, queue, filename, time_queue, time_sent, time_received FROM SBD_SENT WHERE IMEI=(?)''', [imei])
+			records = self.sqliteCursor.fetchall()
+			sbd_sent = []
+			for data in records:
+				table = {}
+				table["type"] = data[0]
+				table["status"] = data[1]
+				table["mtmsn"] = data[2]
+				table["queue"] = data[3]
+				table["filename"] = data[4]
+				table["time_queue"] = data[5]
+				table["time_sent"] = data[6]
+				table["time_received"] = data[7]
+				sbd_sent.append(table)
+			return sbd_sent
+		except sqlite3.Error as error:
+			print("Error while connecting to sqlite", error)
+			return []
+
+	def update_sbd_last_mtmsn(self, imei, mtmsn, time_connection):
+		try:
+			self.sqliteCursor.execute('''SELECT status, time_queue FROM SBD_SENT WHERE IMEI=(?) and MTMSN=(?) ORDER BY time_queue DESC, time_sent DESC''', [imei, mtmsn])
+			records = self.sqliteCursor.fetchone()
+			if(records!=None):
+				print("Find pending mtmsn : "+str(mtmsn))
+				status = records[0]
+				time_queue = records[1]
+				if(status<=1):
+					# Update records
+					self.sqliteCursor.execute("UPDATE SBD_SENT SET status = ?, time_received = ? WHERE imei=? and mtmsn=(?)", [2, time_connection, imei, mtmsn])
+					self.sqliteConnection.commit()
+
 		except sqlite3.Error as error:
 			print("Error while connecting to sqlite", error)
 

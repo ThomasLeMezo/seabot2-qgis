@@ -33,7 +33,7 @@ import logging
 import socket
 
 from PyQt5.QtCore import QDate, QTime, QDateTime, Qt, QLocale, QObject, pyqtSignal
-from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import QMessageBox, QFileDialog
 from .database import *
 from .mission import *
 
@@ -62,11 +62,12 @@ class ImapServer(QObject):
 		send_mail_sleep.connect(self.send_mail_sleep)
 		send_mail_parameters.connect(self.send_mail_parameters)
 
-		if(test_send_mission != None):
-			send_mail_mission.connect(self.send_mail_mission)
+
+		send_mail_mission.connect(self.send_mail_mission)
 
 		imap_signal_stop_server.connect(self.stop_server)
-		test_send_mission.connect(self.test_mission_file)
+		if(test_send_mission != None):
+			test_send_mission.connect(self.test_mission_file)
 
 	def __del__(self):
 		# with self.lock:
@@ -77,23 +78,23 @@ class ImapServer(QObject):
 
 	def send_mail_sleep(self, imei, duration):
 		parser = IridiumMessageParser(DataBaseConnection(init_table=False))
-		data = parser.serialize_cmd_sleep(duration)
+		data, type = parser.serialize_cmd_sleep(duration)
 		print(data)
 		if parser.flag_msg_ok:
-			self.send_mail(imei, data, "sleep")
+			self.send_mail(imei, data, type)
 		return
 
 	def send_mail_parameters(self, imei, enable_mission, enable_flash, enable_depth, enable_engine, period_message):
 		parser = IridiumMessageParser(DataBaseConnection(init_table=False))
-		data = parser.serialize_cmd_parameters(enable_mission, enable_flash, enable_depth, enable_engine, period_message)
+		data, type = parser.serialize_cmd_parameters(enable_mission, enable_flash, enable_depth, enable_engine, period_message)
 		print(data)
 		if parser.flag_msg_ok:
-			self.send_mail(imei, data, "parameters")
+			self.send_mail(imei, data, type)
 		return
 
 	def test_mission_file(self, imei, mission, keep_old_mission):
 		parser = IridiumMessageParser(DataBaseConnection(init_table=False))
-		data = parser.serialize_cmd_mission(mission, keep_old_mission)
+		data, msg_type = parser.serialize_cmd_mission(mission, keep_old_mission)
 		if data==None:
 			return
 		print(data)
@@ -106,13 +107,19 @@ class ImapServer(QObject):
 			msgBox.exec()
 			return
 		debug_path = expanduser("~")+'/sbd_message.sbd'
-		local_file_sbd = open(debug_path,'wb')
-		local_file_sbd.write(data)
-		local_file_sbd.close()
+		filename = QFileDialog.getSaveFileName(None,"Save file", debug_path,"SBD File (*.sbd)")
+		if(filename[0]!=''):
+			local_file_sbd = open(filename[0],'wb')
+			local_file_sbd.write(data)
+			local_file_sbd.close()
+
+		db = DataBaseConnection(init_table=False)
+		filename = imei + "_" + str(int(datetime.datetime.utcnow().timestamp())) + '.sbd'
+		db.add_sbd_sent_to_icu(imei, filename, msg_type, data, datetime.datetime.utcnow().timestamp())
 
 	def send_mail_mission(self, imei, mission, keep_old_mission):
 		parser = IridiumMessageParser(DataBaseConnection(init_table=False))
-		data = parser.serialize_cmd_mission(mission, keep_old_mission)
+		data, type = parser.serialize_cmd_mission(mission, keep_old_mission)
 		if data==None:
 			return
 		print(data)
@@ -128,17 +135,17 @@ class ImapServer(QObject):
 			return
 
 		if parser.flag_msg_ok:
-			self.send_mail(imei, data, "mission")
+			self.send_mail(imei, data, type)
 		return
 
-	def send_mail(self, imei, data, msg_info):
+	def send_mail(self, imei, data, msg_type):
 		if(self.is_connected):
 			db = DataBaseConnection(init_table=False)
 			login_data = db.get_server_data(self.server_id)
 
 			sbd_msg = MIMEBase("application", "octet-stream") # x-zip-compressed
 
-			filename = imei + "_" + msg_info + ".sbd"
+			filename = imei + "_" + str(int(datetime.datetime.utcnow().timestamp())) + ".sbd"
 
 			sbd_msg.set_payload(base64.b64encode(data))
 			sbd_msg.add_header('Content-Disposition', 'attachment', filename=filename)
@@ -154,7 +161,7 @@ class ImapServer(QObject):
 
 			msgBox = QMessageBox()
 			msgBox.setIcon(QMessageBox.Question)
-			msgBox.setText("Are you sure you want to send the CMD "+msg_info)
+			msgBox.setText("Are you sure you want to send the CMD "+str(msg_type))
 			msgBox.setWindowTitle("Seabot")
 			msgBox.setStandardButtons(QMessageBox.Cancel | QMessageBox.Ok)
 			msgBox.setDefaultButton(QMessageBox.Cancel)
@@ -177,6 +184,7 @@ class ImapServer(QObject):
 				return
 
 			print("Message sent to ", imei)
+			db.add_sbd_sent_to_icu(imei, filename, msg_type, data, datetime.datetime.utcnow().timestamp())
 
 			msgBox = QMessageBox()
 			msgBox.setText("The message was send to iridium server")
@@ -359,7 +367,7 @@ class ImapServer(QObject):
 
 			# Determine type of mail
 			sbd_received = mail["Subject"].startswith('SBD Msg From Unit: ')
-			sbd_emitted = mail["Subject"].startswith('SBD Mobile Terminated Message Queued for Unit: ')
+			sbd_sent = mail["Subject"].startswith('SBD Mobile Terminated Message Queued for Unit: ')
 
 			print(mail["Subject"])
 			imei = re.search("Unit: (.*)",mail["Subject"]).group(1)
@@ -368,8 +376,8 @@ class ImapServer(QObject):
 			if(sbd_received):
 				return self.process_received_sbd(imei, mail, time_connection)
 
-			if(sbd_emitted):
-				return self.process_emitted_sbd(imei, mail, time_connection)
+			if(sbd_sent):
+				return self.process_sent_sbd(imei, mail, time_connection)
 
 		return True
 
@@ -400,9 +408,19 @@ class ImapServer(QObject):
 					msg_data = part.get_payload(decode=True)
 					ip = IridiumMessageParser(self.db)
 					ip.save_log_state(msg_data, message_id, time_connection)
+
+		# Check if mtmsn validate previous sent message
+		self.db.update_sbd_last_mtmsn(imei, mtmsn, time_connection)
 		return True
 
-	def process_emitted_sbd(self, imei, mail, time_connection):
+	def process_sent_sbd(self, imei, mail, time_connection):
+		mail_message = mail.get_body('plain').get_content()
+		mtmsn = int(re.search("The MTMSN is (.*),", mail_message).group(1))
+		queue = int(re.search("the message is number (.*) in the queue", mail_message).group(1))
+		filename = re.search("Attachment Filename: (.*).sbd", mail_message).group(1)+'.sbd'
+		print(len(filename))
+		print(filename)
+		self.db.update_sbd_received_by_icu(imei, filename, mtmsn, queue, time_connection)
 		return True
 
 class IridiumMessageParser():
@@ -426,7 +444,10 @@ class IridiumMessageParser():
 		message_data = self.deserialize_log_state(message, send_time)
 		self.db.add_sbd_log_state(message_id, message_data)
 
-	def serialize_data(self, data, val, nb_bit, start_bit, value_min=None, value_max=None):
+	def serialize_data(self, data, val, nb_bit, start_bit, value_min=None, value_max=None, flag_debug=False):
+		if(flag_debug):
+			print("------")
+			print("val init =", val)
 		if(value_min!=None and value_max!=None):
 			scale = ((1<<nb_bit)-1)/(value_max-value_min)
 			val=int(round((val-value_min)*scale))
@@ -435,6 +456,11 @@ class IridiumMessageParser():
 			scale = 1.0
 		mask = ((1<<nb_bit)-1) << start_bit
 		data = data | (mask & (val<<start_bit))
+
+		if(flag_debug):
+			print("val_min =", value_min)
+			print("scale = ", scale)
+			print("val = ", val)
 		return data, nb_bit+start_bit, val/scale+value_min
 
 	def deserialize_data(self, data, nb_bit, start_bit, value_min=None, value_max=None):
@@ -448,20 +474,22 @@ class IridiumMessageParser():
 	def serialize_cmd_parameters(self, enable_mission=True, enable_flash=True, enable_depth=True, enable_engine=True, period_message=60):
 		bit_position = 0
 		data = 0b0
-		data, bit_position, _ = self.serialize_data(data, self.CMD_MSG_TYPE["CMD_PARAMETERS"],4, bit_position)
+		type = self.CMD_MSG_TYPE["CMD_PARAMETERS"]
+		data, bit_position, _ = self.serialize_data(data, type,4, bit_position)
 		data, bit_position, _ = self.serialize_data(data, enable_mission,1, bit_position)
 		data, bit_position, _ = self.serialize_data(data, enable_flash,1, bit_position)
 		data, bit_position, _ = self.serialize_data(data, enable_depth,1, bit_position)
 		data, bit_position, _ = self.serialize_data(data, enable_engine,1, bit_position)
 		data, bit_position, _ = self.serialize_data(data, period_message,8, bit_position)
-		return data.to_bytes(int(bit_position/8), byteorder='little')
+		return data.to_bytes(int(bit_position/8), byteorder='little'), type
 
 	def serialize_cmd_sleep(self, duration=0):
 		bit_position = 0
 		data = 0b0
-		data, bit_position, _ = self.serialize_data(data, self.CMD_MSG_TYPE["CMD_SLEEP"],4, bit_position)
+		type = self.CMD_MSG_TYPE["CMD_SLEEP"]
+		data, bit_position, _ = self.serialize_data(data, type,4, bit_position)
 		data, bit_position, _ = self.serialize_data(data, duration,12, bit_position)
-		return data.to_bytes(int(bit_position/8), byteorder='little')
+		return data.to_bytes(int(bit_position/8), byteorder='little'), type
 
 	def serialize_cmd_mission_wp(self, data, wp, bit_position, mean_east, mean_north):
 		self.wp_id+=1
@@ -483,8 +511,8 @@ class IridiumMessageParser():
 				msgBox.exec()
 				self.flag_msg_ok = False
 				return None, None
-			data, bit_position, _ = self.serialize_data(data, d_east, 15, bit_position) # Should be signed ! be carefull
-			data, bit_position, _ = self.serialize_data(data, d_north, 15, bit_position)
+			data, bit_position, _ = self.serialize_data(data, d_east, 15, bit_position, flag_debug=True) # Should be signed ! be carefull
+			data, bit_position, _ = self.serialize_data(data, d_north, 15, bit_position, flag_debug=True)
 		else:
 			depth = round(wp.depth*4.0) #25cm resolution
 			data, bit_position, _ = self.serialize_data(data, depth, 11, bit_position)
@@ -499,10 +527,13 @@ class IridiumMessageParser():
 	def serialize_cmd_mission(self, mission, keep_old_mission):
 		bit_position = 0
 		data = 0b0
+		type = 0
 		if(keep_old_mission):
-			data, bit_position, _ = self.serialize_data(data, self.CMD_MSG_TYPE["CMD_MISSION_KEEP"],4, bit_position)
+			type = self.CMD_MSG_TYPE["CMD_MISSION_KEEP"]
+			data, bit_position, _ = self.serialize_data(data, type,4, bit_position)
 		else:
-			data, bit_position, _ = self.serialize_data(data, self.CMD_MSG_TYPE["CMD_MISSION_NEW"],4, bit_position)
+			type = self.CMD_MSG_TYPE["CMD_MISSION_NEW"]
+			data, bit_position, _ = self.serialize_data(data, type,4, bit_position)
 
 		# Number of wp in the message
 		data, bit_position, _ = self.serialize_data(data, len(mission.get_wp_list()),8, bit_position)
@@ -540,7 +571,7 @@ class IridiumMessageParser():
 
 		# ---------------------------------
 
-		return data.to_bytes(int(bit_position/8), byteorder='little')
+		return data.to_bytes(int(bit_position/8), byteorder='little'), type
 
 	def deserialize_log_state(self, data, send_time):
 		bit_position = 0

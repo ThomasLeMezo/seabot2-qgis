@@ -135,6 +135,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.listWidget_mission.currentRowChanged.connect(self.update_mission_info)
 
         self.init_mission_table_widget()
+        self.init_sbd_sent_tree_widget()
 
         # State tab
         self.pushButton_state_rename.clicked.connect(self.rename_robot)
@@ -305,6 +306,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.pushButton_com_send_sleep.setEnabled(False)
             self.pushButton_com_send_parameters.setEnabled(False)
             self.pushButton_com_send_mission.setEnabled(False)
+            self.progressBar_imap_next_connection.setEnabled(False)
         else:
             self.comboBox_config_email.setEnabled(False)
             self.lineEdit_email.setEnabled(False)
@@ -321,6 +323,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.pushButton_com_send_sleep.setEnabled(True)
             self.pushButton_com_send_parameters.setEnabled(True)
             self.pushButton_com_send_mission.setEnabled(True)
+            self.progressBar_imap_next_connection.setEnabled(True)
 
     def add_item_treeWidget(self, val1, val2=None, nb_digit=-1, warning=False):
         item = None
@@ -391,7 +394,14 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def init_mission_table_widget(self):
         self.tableWidget_mission.setColumnCount(5)
-        self.tableWidget_mission.setHorizontalHeaderLabels(["Depth","D start", "D end", "T start", "T end"])
+        self.tableWidget_mission.setHorizontalHeaderLabels(["Depth","From start", "To end", "Start Date", "Ending Date"])
+        self.tableWidget_mission.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
+
+    def init_sbd_sent_tree_widget(self):
+        self.treeWidget_sbd_sent.setColumnCount(2)
+        self.treeWidget_sbd_sent.setHeaderLabels(["Message", "Status"])
+        self.treeWidget_sbd_sent.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
+
 
     ###########################################################################
     ### Handler Button
@@ -496,6 +506,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.update_state_info()
             self.update_tracking_seabot()
             self.update_state_view()
+            self.update_treeWidget_sbd_sent()
 
     def update_mission_info(self, row):
         self.mission_selected = row
@@ -586,6 +597,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             for wp in wp_list:
                 self.tableWidget_add_waypoint(wp, row)
                 row+=1
+            self.tableWidget_mission.resizeColumnsToContents()
         else:
             self.label_mission_status.setStyleSheet("background-color: gray")
             self.label_mission_start_time.setText("-")
@@ -621,6 +633,71 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 item.setBackground(QBrush(Qt.gray))
             self.tableWidget_mission.setItem(row, i, item)
 
+    SBD_SENT_STATUS_TO_TEXT = {0:"SENT_TO_ICU", 1:"RECEIVED_BY_ICU", 2:"RECEIVED_BY_ROBOT", None:"UNKNOWN"}
+    CMD_MSG_TYPE_TO_TEXT = {0:"LOG_STATE", 1:"CMD_SLEEP", 2:"CMD_PARAMETERS", 3:"CMD_MISSION_NEW", 4:"CMD_MISSION_KEEP", None:"UNKNOWN"}
+
+    def update_treeWidget_sbd_sent(self):
+        if(self.comboBox_state_imei.currentIndex() != -1):
+            list_msg = self.db.get_sbd_sent(self.comboBox_state_imei.currentData())
+            self.treeWidget_sbd_sent.clear()
+
+            for msg in list_msg:
+                msg_sent =  QTreeWidgetItem(self.treeWidget_sbd_sent)
+                msg_sent.setText(0, self.CMD_MSG_TYPE_TO_TEXT[msg["type"]])
+                msg_sent.setText(1, self.SBD_SENT_STATUS_TO_TEXT[msg["status"]])
+
+                # Status
+                if(msg["status"]==0 or msg["status"]==None):
+                    msg_sent.setBackground(1, QBrush(Qt.red))
+                elif(msg["status"]==1):
+                    msg_sent.setBackground(1, QBrush(Qt.yellow))
+                elif(msg["status"]==2):
+                    msg_sent.setBackground(1, QBrush(Qt.green))
+
+                # Filename
+                msg_filename = QTreeWidgetItem(msg_sent)
+                msg_filename.setText(0, "filename")
+                msg_filename.setText(1, str(msg["filename"]))
+
+                # MTMSN
+                msg_mtmsn = QTreeWidgetItem(msg_sent)
+                msg_mtmsn.setText(0, "mtmsn")
+                msg_mtmsn.setText(1, str(msg["mtmsn"]))
+
+                # Queue
+                msg_queue = QTreeWidgetItem(msg_sent)
+                msg_queue.setText(0, "queue")
+                msg_queue.setText(1, str(msg["queue"]))
+
+                # Time sent
+                msg_time_sent = QTreeWidgetItem(msg_sent)
+                msg_time_sent.setText(0, "time sent")
+                if(msg["time_sent"]!=None):
+                    qtime = QDateTime.fromSecsSinceEpoch(int(round(msg["time_sent"])), Qt.UTC)
+                    msg_time_sent.setText(1, qtime.toString("dd/MM/yy hh:mm:ss"))
+                else:
+                    msg_time_sent.setText(1, "-")
+
+                # Time queue
+                msg_time_queue = QTreeWidgetItem(msg_sent)
+                msg_time_queue.setText(0, "time queue")
+                if(msg["time_queue"]!=None):
+                    qtime = QDateTime.fromSecsSinceEpoch(int(round(msg["time_queue"])), Qt.UTC)
+                    msg_time_queue.setText(1, qtime.toString("dd/MM/yy hh:mm:ss"))
+                else:
+                    msg_time_queue.setText(1, "-")
+
+                # Time queue
+                msg_time_received = QTreeWidgetItem(msg_sent)
+                msg_time_received.setText(0, "time received")
+                if(msg["time_received"]!=None):
+                    qtime = QDateTime.fromSecsSinceEpoch(int(round(msg["time_received"])), Qt.UTC)
+                    msg_time_received.setText(1, qtime.toString("dd/MM/yy hh:mm:ss"))
+                else:
+                    msg_time_received.setText(1, "-")
+
+            self.treeWidget_sbd_sent.resizeColumnToContents(0)
+
     def send_com_sleep(self):
         if(self.comboBox_state_imei.currentIndex() != -1):
             self.send_mail_sleep.emit(str(self.comboBox_state_imei.currentData()), self.dial_com_sleep_duration.value())
@@ -632,6 +709,8 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def test_com_mission(self):
         if(self.comboBox_state_imei.currentIndex() != -1 and self.mission_iridium_com!=None):
             self.test_mission_signal.emit(str(self.comboBox_state_imei.currentData()), self.mission_iridium_com, self.radioButton_com_mission_add.isChecked())
+            self.update_treeWidget_sbd_sent()
+            print("Test com mission")
 
 
     def send_com_parameters(self):
@@ -642,6 +721,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 self.checkBox_com_param_depth.isChecked(),\
                 self.checkBox_com_param_engine.isChecked(),\
                 self.dial_com_mission_message_period.value())
+            self.update_treeWidget_sbd_sent()
 
     def update_log_msg(self, val):
         self.label_server_log.setText(val)
@@ -675,3 +755,4 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.label_com_mission_nb_wp.setText(str(self.mission_iridium_com.get_nb_wp()))
             self.label_com_mission_tstart.setText(str(self.mission_iridium_com.start_time_utc))
             self.label_com_mission_tend.setText(str(self.mission_iridium_com.end_time))
+            self.pushButton_test_send_mission.setEnabled(True)

@@ -15,11 +15,10 @@ class SeabotWaypoint():
 		self.north = north
 		self.limit_velocity = limit_velocity
 		self.approach_velocity = approach_velocity
+		self.enable_thrusters = enable_thrusters
 
-		if(east==0.0 and north==0.0):
+		if(self.depth>0.0):
 			self.enable_thrusters = False
-		else:
-			self.enable_thrusters = True
 		self.seafloor_landing = seafloor_landing
 
 		self.id = wp_id
@@ -177,6 +176,7 @@ class SeabotMission():
 											enable_thrusters=bool(wp.findtext("enable_thrusters", default="True")),
 											seafloor_landing=bool(wp.findtext("seafloor_landing", default="False")),
 											wp_id=len(self.waypoint_list)+1))
+		# print(self.waypoint_list[-1])
 
 	def parse_loop(self, l, depth_offset=0.0):
 		n = int(l.attrib["number"])

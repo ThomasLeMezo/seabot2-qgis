@@ -46,15 +46,16 @@ class LayerMission():
 
 		## Find if layer already exist
 		layer_list = QgsProject.instance().mapLayersByName(self.layer_track)
-		
+
 		# Build list of points
 		list_wp = []
 		for wp in self.seabotMission.get_wp_list():
-			list_wp.append(QgsPoint(wp.get_east(), wp.get_north()))
+			if(wp.enable_thrusters):
+				list_wp.append(QgsPoint(wp.get_east(), wp.get_north()))
 
 		if(len(layer_list)!=0):
 			QgsProject.instance().removeMapLayer(layer_list[0])
-		
+
 		### Add New layer Last Position
 		layer =  QgsVectorLayer('linestring?crs=epsg:2154&index=yes', self.layer_track , "memory")
 
@@ -103,7 +104,7 @@ class LayerMission():
 			root = QgsProject.instance().layerTreeRoot().insertGroup(0, self.group_name)
 
 		layer_list = QgsProject.instance().mapLayersByName(self.layer_pose)
-		
+
 		# print(point)
 		if(len(layer_list)==0):
 			### Add New layer Last Position
