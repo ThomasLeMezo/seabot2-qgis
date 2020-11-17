@@ -378,6 +378,8 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.add_item_treeWidget("humidity", nb_digit=2, warning=(self.data_log["humidity"]>50.0))
             self.add_item_treeWidget("waypoint", nb_digit=0)
             self.add_item_treeWidget("last_cmd_received")
+            self.treeWidget_iridium.resizeColumnToContents(0)
+            self.treeWidget_iridium.resizeColumnToContents(1)
 
     def update_state_info(self):
         if(self.data_log!=None):

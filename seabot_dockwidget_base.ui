@@ -655,7 +655,7 @@
            </sizepolicy>
           </property>
           <property name="text">
-           <string>Open mission</string>
+           <string>Open mission(s)</string>
           </property>
          </widget>
         </item>
