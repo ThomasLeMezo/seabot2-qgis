@@ -382,16 +382,19 @@ class ImapServer(QObject):
 		return True
 
 	def process_received_sbd(self, imei, mail, time_connection):
-		if mail.get_content_maintype() != 'multipart':
-			print("No attachment")
-			return True
-
 		self.db.add_new_robot(imei) # Add new robot if not existing
 
 		mail_message = mail.get_body('plain').get_content()
 		momsn = int(re.search("MOMSN: (.*)", mail_message).group(1))
 		mtmsn = int(re.search("MTMSN: (.*)", mail_message).group(1))
 		print("momsn =", momsn, "mtmsn =", mtmsn)
+
+		# Check if mtmsn validate previous sent message
+		self.db.update_sbd_last_mtmsn(imei, mtmsn, time_connection)
+
+		if mail.get_content_maintype() != 'multipart':
+			print("No attachment")
+			return True
 
 		## Extract enclosed file
 		for part in mail.iter_attachments():
@@ -409,8 +412,6 @@ class ImapServer(QObject):
 					ip = IridiumMessageParser(self.db)
 					ip.save_log_state(msg_data, message_id, time_connection)
 
-		# Check if mtmsn validate previous sent message
-		self.db.update_sbd_last_mtmsn(imei, mtmsn, time_connection)
 		return True
 
 	def process_sent_sbd(self, imei, mail, time_connection):

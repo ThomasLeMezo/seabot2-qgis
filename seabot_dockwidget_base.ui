@@ -164,7 +164,7 @@
          <widget class="QDateTimeEdit" name="dateTimeEdit_last_sync">
           <property name="dateTime">
            <datetime>
-            <hour>5</hour>
+            <hour>4</hour>
             <minute>0</minute>
             <second>0</second>
             <year>2018</year>
@@ -174,7 +174,7 @@
           </property>
           <property name="minimumDateTime">
            <datetime>
-            <hour>3</hour>
+            <hour>2</hour>
             <minute>0</minute>
             <second>0</second>
             <year>2014</year>
@@ -774,7 +774,7 @@
              <widget class="QDateTimeEdit" name="dateTimeEdit_state_view_start">
               <property name="dateTime">
                <datetime>
-                <hour>7</hour>
+                <hour>6</hour>
                 <minute>0</minute>
                 <second>0</second>
                 <year>2018</year>
@@ -784,7 +784,7 @@
               </property>
               <property name="minimumDateTime">
                <datetime>
-                <hour>18</hour>
+                <hour>17</hour>
                 <minute>0</minute>
                 <second>0</second>
                 <year>2014</year>
@@ -817,7 +817,7 @@
              <widget class="QDateTimeEdit" name="dateTimeEdit_state_view_end">
               <property name="dateTime">
                <datetime>
-                <hour>7</hour>
+                <hour>6</hour>
                 <minute>0</minute>
                 <second>0</second>
                 <year>2050</year>
@@ -827,7 +827,7 @@
               </property>
               <property name="minimumDateTime">
                <datetime>
-                <hour>18</hour>
+                <hour>17</hour>
                 <minute>0</minute>
                 <second>0</second>
                 <year>2014</year>
@@ -1189,7 +1189,7 @@
                    <bool>false</bool>
                   </property>
                   <property name="text">
-                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#cc0000;&quot;&gt;Note: duration is rounded to the nearest minute and position to nearest 4m&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#cc0000;&quot;&gt;Note: duration is rounded to the nearest minute, position to nearest 4m and depth to nearest 0.25m&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                   </property>
                   <property name="textFormat">
                    <enum>Qt::RichText</enum>

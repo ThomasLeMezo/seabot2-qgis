@@ -72,7 +72,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.momsn_max = 0
         self.momsn_current = 0
 
-        self.data_log = {}
+        self.data_log = None
         self.is_data = False
 
         # Layers
@@ -449,6 +449,9 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         if(self.comboBox_state_imei.currentIndex() != -1):
             currentIndex = self.comboBox_state_imei.currentIndex()
             self.db.errase_log(self.comboBox_state_imei.currentData())
+            self.data_log = None
+            self.update_state_info()
+            self.fill_treeWidget_log_state()
 
     def last_log_state(self):
         self.data_log, self.momsn_current = self.db.get_last_log_state(self.comboBox_state_imei.currentData())
