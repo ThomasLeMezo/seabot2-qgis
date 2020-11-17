@@ -270,13 +270,13 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def delete_mission(self, event):
         mission_id = self.listWidget_mission.currentRow()
-        print("mission selected = ", mission_id)
+        # print("mission selected = ", mission_id)
         if mission_id != -1:
             self.listWidget_mission.takeItem(mission_id)
-            print(mission_id)
-            print(self.layerMissions)
+            # print(mission_id)
+            # print(self.layerMissions)
             del self.layerMissions[mission_id]
-            print(self.layerMissions)
+            # print(self.layerMissions)
             self.mission_selected = self.listWidget_mission.currentRow()
 
 
@@ -567,23 +567,30 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.label_mission_file.setText(seabotMission.get_filename())
             # Update IHM with mission data set point
             wp = seabotMission.get_current_wp()
+            wp_id = wp.get_id()
             if(wp!=None):
-                if(wp.get_depth()==0.0 or seabotMission.is_end_mission()):
+                if(wp_id==-1):
+                    self.label_mission_status.setText("SURFACE - WAITING MISSION START")
+                    self.label_mission_status.setStyleSheet("background-color: green")
+                elif(seabotMission.is_end_mission()):
+                    self.label_mission_status.setText("SURFACE - END OF MISSION")
+                    self.label_mission_status.setStyleSheet("background-color: green")
+                elif(wp.get_depth()==0.0):
                     self.label_mission_status.setText("SURFACE")
                     self.label_mission_status.setStyleSheet("background-color: green")
                 else:
                     self.label_mission_status.setText("UNDERWATER")
                     self.label_mission_status.setStyleSheet("background-color: red")
 
-                self.label_mission_start_time.setText(str(wp.get_time_start().replace(microsecond=0)))
-                self.label_mission_end_time.setText(str(wp.get_time_end().replace(microsecond=0)))
-                self.label_mission_depth.setText(str(wp.get_depth()))
+                self.label_mission_start_time.setText(str(seabotMission.get_mission_start_time().replace(microsecond=0)))
+                self.label_mission_end_time.setText(str(seabotMission.get_mission_end_time().replace(microsecond=0)))
+                self.label_mission_depth.setText(str(wp.get_depth()) + "m")
                 self.label_mission_waypoint_id.setText(str(wp.get_id())+"/"+str(seabotMission.get_nb_wp()))
-                self.label_mission_time_remain.setText(self.chop_microseconds(wp.get_time_end()-datetime.datetime.utcnow()))
+                self.label_mission_time_remain.setText(self.chop_microseconds(seabotMission.get_mission_end_time()-datetime.datetime.utcnow()))
 
                 wp_next = seabotMission.get_next_wp()
                 if(wp_next != None):
-                    self.label_mission_next_depth.setText(str(wp_next.get_depth()))
+                    self.label_mission_next_depth.setText(str(wp_next.get_depth()) + "m")
                 else:
                     self.label_mission_next_depth.setText("END OF MISSION")
             else:
@@ -602,7 +609,8 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 row+=1
             self.tableWidget_mission.resizeColumnsToContents()
         else:
-            self.label_mission_status.setStyleSheet("background-color: gray")
+            self.label_mission_status.setStyleSheet("background-color: rgba(255, 255, 255, 0%)")
+            self.label_mission_file.setText("-")
             self.label_mission_start_time.setText("-")
             self.label_mission_end_time.setText("-")
             self.label_mission_depth.setText("-")
@@ -611,6 +619,8 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.label_mission_next_depth.setText("-")
             self.label_mission_status.setText("-")
             self.label_mission_waypoint_id.setText("-")
+            self.tableWidget_mission.clearContents()
+            self.tableWidget_mission.setRowCount(0)
         self.mission_selected_last = self.mission_selected
 
     def tableWidget_add_waypoint(self, wp, row):

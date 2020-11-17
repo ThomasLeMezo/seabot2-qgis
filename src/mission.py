@@ -6,10 +6,13 @@ from PyQt5.QtCore import QFileInfo
 
 class SeabotWaypoint():
 
-	def __init__(self, wp_id ,time_end, time_start, duration, depth, east, north, limit_velocity, approach_velocity, enable_thrusters, seafloor_landing=False):
+	def __init__(self, wp_id ,time_end, time_start, duration=None, depth=0.0, east=0.0, north=0.0, limit_velocity=0.0, approach_velocity=0.0, enable_thrusters=True, seafloor_landing=False):
 		self.time_end = time_end
 		self.time_start = time_start
-		self.duration = duration
+		if(duration!=None):
+			self.duration = duration
+		else:
+			self.duration = self.time_end - self.time_start
 		self.depth = depth
 		self.east = east
 		self.north = north
@@ -82,6 +85,7 @@ class SeabotMission():
 		self.end_time = None
 		self.filepath = ""
 		self.filename = ""
+		self.loading_start_time = None
 
 		if filename!=None:
 			self.load_mission_xml(filename)
@@ -98,6 +102,12 @@ class SeabotMission():
 		else:
 			return False
 
+	def get_mission_start_time(self):
+		return self.start_time_utc
+
+	def get_mission_end_time(self):
+		return self.end_time
+
 	def get_wp_list(self):
 		return self.waypoint_list
 
@@ -112,6 +122,11 @@ class SeabotMission():
 
 	def get_current_wp(self):
 		t = datetime.datetime.utcnow()
+
+		if(self.current_wp_id==0 and self.start_time_utc>t):
+			return SeabotWaypoint(-1, self.waypoint_list[0].time_start, t)
+		if(self.current_wp_id>=len(self.waypoint_list)-1 and self.end_time<t):
+			return SeabotWaypoint(len(self.waypoint_list)-1, self.waypoint_list[-1].time_end, self.waypoint_list[-1].time_end)
 
 		while(len(self.waypoint_list)-1>self.current_wp_id and self.waypoint_list[self.current_wp_id].time_end<t):
 			self.current_wp_id+=1
@@ -145,7 +160,7 @@ class SeabotMission():
 										minute=int(child_offset.find("min").text))
 		else:
 			print("No start time UTC found in mission file")
-			self.start_time_utc = datetime.datetime.now()
+			self.start_time_utc = datetime.datetime.utcnow()
 
 		self.end_time = self.start_time_utc
 
