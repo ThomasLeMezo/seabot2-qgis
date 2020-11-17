@@ -196,6 +196,15 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def server_delete(self, event):
         id_config = self.comboBox_config_email.currentData()
+        msgBox = QMessageBox()
+        msgBox.setIcon(QMessageBox.Question)
+        msgBox.setText("Are you sure you want to delete email account "+str(id_config))
+        msgBox.setWindowTitle("Seabot")
+        msgBox.setStandardButtons(QMessageBox.Cancel | QMessageBox.Ok)
+        msgBox.setDefaultButton(QMessageBox.Cancel)
+        ret = msgBox.exec()
+        if(ret!=QMessageBox.Ok):
+            return False
         self.db.delete_server(id_config)
         self.update_server_list()
         return True
@@ -447,6 +456,15 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def errase_log_robot(self):
         if(self.comboBox_state_imei.currentIndex() != -1):
+            msgBox = QMessageBox()
+            msgBox.setIcon(QMessageBox.Question)
+            msgBox.setText("Are you sure you want to delete log of "+str(self.comboBox_state_imei.currentData()))
+            msgBox.setWindowTitle("Seabot")
+            msgBox.setStandardButtons(QMessageBox.Cancel | QMessageBox.Ok)
+            msgBox.setDefaultButton(QMessageBox.Cancel)
+            ret = msgBox.exec()
+            if(ret!=QMessageBox.Ok):
+                return False
             currentIndex = self.comboBox_state_imei.currentIndex()
             self.db.errase_log(self.comboBox_state_imei.currentData())
             self.data_log = None
@@ -569,7 +587,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             wp = seabotMission.get_current_wp()
             wp_id = wp.get_id()
             if(wp!=None):
-                if(wp_id==-1):
+                if(wp_id==0.0):
                     self.label_mission_status.setText("SURFACE - WAITING MISSION START")
                     self.label_mission_status.setStyleSheet("background-color: green")
                 elif(seabotMission.is_end_mission()):
@@ -595,7 +613,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                     self.label_mission_next_depth.setText("END OF MISSION")
             else:
                 self.label_mission_status.setText("NO WAYPOINTS")
-                self.label_mission_waypoint_id.setText(str(seabotMission.get_current_wp_id()+1) + "/"+str(seabotMission.get_nb_wp()))
+                self.label_mission_waypoint_id.setText(str(seabotMission.get_current_wp_id()) + "/"+str(seabotMission.get_nb_wp()))
 
 
             # Update Table widget

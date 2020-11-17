@@ -124,9 +124,9 @@ class SeabotMission():
 		t = datetime.datetime.utcnow()
 
 		if(self.current_wp_id==0 and self.start_time_utc>t):
-			return SeabotWaypoint(-1, self.waypoint_list[0].time_start, t)
+			return SeabotWaypoint(0, self.waypoint_list[0].time_start, t)
 		if(self.current_wp_id>=len(self.waypoint_list)-1 and self.end_time<t):
-			return SeabotWaypoint(len(self.waypoint_list)-1, self.waypoint_list[-1].time_end, self.waypoint_list[-1].time_end)
+			return SeabotWaypoint(len(self.waypoint_list), self.waypoint_list[-1].time_end, self.waypoint_list[-1].time_end)
 
 		while(len(self.waypoint_list)-1>self.current_wp_id and self.waypoint_list[self.current_wp_id].time_end<t):
 			self.current_wp_id+=1
