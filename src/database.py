@@ -47,13 +47,13 @@ class DataBaseConnection():
 							)''',
 							'''CREATE TABLE "'''+sqlite_tables_name[2]+'''" (
 									`config_id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-									`email`	TEXT NOT NULL,
-									`password`	TEXT NOT NULL,
-									`server_imap_ip`	TEXT NOT NULL,
-									`server_imap_port`	TEXT NOT NULL,
-									`server_smtp_ip`	TEXT NOT NULL,
-									`server_smtp_port`	TEXT NOT NULL,
-									`iridium_server_mail`	TEXT NOT NULL,
+									`email`	TEXT,
+									`password`	TEXT,
+									`server_imap_ip`	TEXT,
+									`server_imap_port`	TEXT DEFAULT '993',
+									`server_smtp_ip`	TEXT,
+									`server_smtp_port`	TEXT,
+									`iridium_server_mail`	TEXT,
 									`last_sync`	TEXT NOT NULL
 							)''',
 							'''CREATE TABLE "'''+sqlite_tables_name[3]+'''" (
@@ -174,11 +174,12 @@ class DataBaseConnection():
 
 			data_tuple = (email, password, server_imap_ip, server_imap_port, server_smtp_ip, server_smtp_port, iridium_server_mail, t_zero)
 			self.sqliteCursor.execute(sqlite_insert_config, data_tuple)
+			id = self.sqliteCursor.lastrowid
 			self.sqliteConnection.commit()
-			return True
+			return id
 		except:
 			print("Error while connecting to sqlite", error)
-			return False
+			return None
 
 	def save_server(self, email, password, server_imap_ip, server_imap_port, server_smtp_ip, server_smtp_port, iridium_server_mail, t_zero, config_id):
 		try:
@@ -582,13 +583,36 @@ class DataBaseConnection():
 		except sqlite3.Error as error:
 			print("Error while connecting to sqlite", error)
 
+	def errase_com(self, imei):
+		try:
+			self.sqliteCursor.execute('''DELETE FROM SBD_SENT WHERE IMEI = ?''', [imei])
+			self.sqliteConnection.commit()
+			return True
+		except sqlite3.Error as error:
+			print("Error while connecting to sqlite", error)
+			return False
+
 	def errase_log(self, imei):
 		try:
-			self.sqliteCursor.execute("DELETE FROM SBD_RECEIVED WHERE IMEI=(?)", [imei])
+			self.sqliteCursor.execute('''DELETE FROM SBD_LOG_STATE WHERE SBD_LOG_STATE.message_id IN (
+										  SELECT SBD_LOG_STATE.message_id FROM SBD_LOG_STATE
+										  	INNER JOIN SBD_RECEIVED ON (
+										    	SBD_RECEIVED.IMEI = ?
+											AND
+												SBD_RECEIVED.message_id=SBD_LOG_STATE.message_id
+											))''', [imei])
 			self.sqliteConnection.commit()
 			self.sqliteCursor.execute("DELETE FROM SBD_RECEIVED WHERE IMEI=(?)", [imei])
 			self.sqliteConnection.commit()
+			return True
+		except sqlite3.Error as error:
+			print("Error while connecting to sqlite", error)
+			return False
 
+	def errase_robot(self, imei):
+		try:
+			self.sqliteCursor.execute("DELETE FROM ROBOTS WHERE IMEI=(?)", [imei])
+			self.sqliteConnection.commit()
 			return True
 		except sqlite3.Error as error:
 			print("Error while connecting to sqlite", error)

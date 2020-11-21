@@ -48,7 +48,7 @@ class ImapServer(QObject):
 	def __init__(self, send_mail_sleep, send_mail_parameters, send_mail_mission, imap_signal_stop_server, test_send_mission=None):
 		super().__init__()
 		self.serverIMAP = None
-		self.mailbox = 'INBOX'
+		self.mailbox = 'Inbox' # change function of imap server
 		self.is_connected = False
 		self.is_first_connection = True
 		self.running = False
@@ -237,6 +237,7 @@ class ImapServer(QObject):
 			time.sleep(1./freq)
 			time_counter -= 1
 			self.imap_status_next_connection.emit(math.ceil(time_counter/freq))
+		self.imap_status_next_connection.emit(0)
 
 	def set_server_id(self, server_id):
 		self.server_id = server_id
@@ -244,15 +245,16 @@ class ImapServer(QObject):
 	def connect_imap(self):
 		print("Try connect")
 		try:
+			rsp = None
 			# Retreive data from DB
 			login_data = self.db.get_server_data(self.server_id)
 			if(len(login_data)==0):
 				raise Exception('wrong server_id ', self.server_id)
-
+			print("Try Login")
 			self.serverIMAP = imaplib.IMAP4_SSL(login_data["server_imap_ip"], login_data["server_imap_port"])
 			rsp = self.serverIMAP.login(login_data["email"], login_data["password"])
-
-			if(rsp[1][0].decode()=="LOGIN completed."):
+			print(self.serverIMAP.list())
+			if(rsp[1][0].decode()=="LOGIN completed." or re.search("Logged in", rsp[1][0].decode()).group(0)=="Logged in"):
 				self.is_connected = True
 				self.is_first_connection = True
 				self.imap_signal_button_color.emit(True)
@@ -266,7 +268,7 @@ class ImapServer(QObject):
 
 		except imaplib.IMAP4.error as err:
 			print("Error imap ", err)
-			self.imap_signal_log.emit("Error IMAP")
+			self.imap_signal_log.emit("Error IMAP\n" + str(err))
 			self.close_server()
 			return False
 		except sqlite3.Error as error:
@@ -276,7 +278,7 @@ class ImapServer(QObject):
 			return False
 		except:
 			print("Error ", sys.exc_info())
-			self.imap_signal_log.emit("Error - No connection")
+			self.imap_signal_log.emit("Error - No connection\n" + str(sys.exc_info()[1]))
 			self.close_server()
 			return False
 
@@ -289,6 +291,8 @@ class ImapServer(QObject):
 					return False
 				self.imap_signal_log.emit("Update " + str(k) + "/" + str(len(list_msg_num)) + " (" + str(num.decode()) + ")")
 				k+=1
+				if(k%10==0):
+					self.imap_signal.emit()
 			self.imap_signal.emit()
 			return True
 
@@ -437,10 +441,13 @@ class IridiumMessageParser():
 	L93_NORTH_MAX = 7200000.0
 	REF_POSIX_TIME = 1604874973 #To be update every 5 years !
 
-	def __init__(self, db):
+	def __init__(self, db=None):
 		self.db = db
 
 	def save_log_state(self, message_string, message_id, send_time):
+		if(len(message_string)!=17):
+			print("DECODE LOG STATE ERROR : message length != 17")
+			return
 		message = int.from_bytes(message_string, byteorder='little', signed=False)
 		message_data = self.deserialize_log_state(message, send_time)
 		self.db.add_sbd_log_state(message_id, message_data)
@@ -512,8 +519,8 @@ class IridiumMessageParser():
 				msgBox.exec()
 				self.flag_msg_ok = False
 				return None, None
-			data, bit_position, _ = self.serialize_data(data, d_east, 15, bit_position, flag_debug=True) # Should be signed ! be carefull
-			data, bit_position, _ = self.serialize_data(data, d_north, 15, bit_position, flag_debug=True)
+			data, bit_position, _ = self.serialize_data(data, d_east, 15, bit_position, flag_debug=False) # Should be signed ! be carefull
+			data, bit_position, _ = self.serialize_data(data, d_north, 15, bit_position, flag_debug=False)
 		else:
 			depth = round(wp.depth*4.0) #25cm resolution
 			data, bit_position, _ = self.serialize_data(data, depth, 11, bit_position)

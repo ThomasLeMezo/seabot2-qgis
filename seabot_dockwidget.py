@@ -117,17 +117,15 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         self.spinBox_gnss_trace.valueChanged.connect(self.update_vanish_trace)
 
-        self.pushButton_server_save.clicked.connect(self.server_save)
         self.pushButton_server_new.clicked.connect(self.server_new)
         self.pushButton_server_delete.clicked.connect(self.server_delete)
-        self.comboBox_config_email.currentIndexChanged.connect(self.select_server)
         self.pushButton_server_connect.clicked.connect(self.server_connect)
 
         self.checkBox_gnss_lock.stateChanged.connect(self.update_lock_view)
         self.checkBox_gnss_distance.stateChanged.connect(self.update_gnss_seabot_pose)
         self.checkBox_gnss_delete.stateChanged.connect(self.update_gnss_delete)
 
-        self.dateTimeEdit_last_sync.dateTimeChanged.connect(self.update_last_sync)
+        self.enable_slot_server_edit()
 
         # Mission tab
         self.pushButton_open_mission.clicked.connect(self.open_mission)
@@ -144,10 +142,13 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.pushButton_state_last.clicked.connect(self.last_log_state)
         self.comboBox_state_imei.currentIndexChanged.connect(self.update_state_imei)
         self.pushButton_errase_log.clicked.connect(self.errase_log_robot)
+        self.pushButton_errase_robot.clicked.connect(self.errase_robot)
 
         self.checkBox_state_view_last_received.stateChanged.connect(self.update_sate_view_last_received)
         self.dateTimeEdit_state_view_end.dateTimeChanged.connect(self.update_sate_view_end)
         self.dateTimeEdit_state_view_start.dateTimeChanged.connect(self.update_sate_view_start)
+
+        self.pushButton_test_decode_log.clicked.connect(self.test_decode_log)
 
         # COM tab
         self.pushButton_com_send_sleep.clicked.connect(self.send_com_sleep)
@@ -159,6 +160,8 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.dial_com_mission_message_period.valueChanged.connect(self.update_com_mission_message_period)
         self.pushButton_com_mission_open.clicked.connect(self.com_open_mission)
 
+        self.pushButton_delete_com.clicked.connect(self.errase_com)
+
         # Iridium
         self.mission_iridium_com = None
 
@@ -168,7 +171,30 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.update_robots_list()
         self.update_state_imei()
 
-    def server_save(self, event):
+    def enable_slot_server_edit(self, enable=True):
+        if(enable):
+            self.lineEdit_email.editingFinished.connect(self.server_save)
+            self.lineEdit_password.editingFinished.connect(self.server_save)
+            self.lineEdit_imap_server_ip.editingFinished.connect(self.server_save)
+            self.lineEdit_imap_server_port.editingFinished.connect(self.server_save)
+            self.lineEdit_smtp_server_ip.editingFinished.connect(self.server_save)
+            self.lineEdit_smtp_server_port.editingFinished.connect(self.server_save)
+            self.lineEdit_iridium_server_mail.editingFinished.connect(self.server_save)
+            self.dateTimeEdit_last_sync.dateTimeChanged.connect(self.server_save)
+            self.comboBox_config_email.currentIndexChanged.connect(self.select_server)
+        else:
+            self.lineEdit_email.editingFinished.disconnect(self.server_save)
+            self.lineEdit_password.editingFinished.disconnect(self.server_save)
+            self.lineEdit_imap_server_ip.editingFinished.disconnect(self.server_save)
+            self.lineEdit_imap_server_port.editingFinished.disconnect(self.server_save)
+            self.lineEdit_smtp_server_ip.editingFinished.disconnect(self.server_save)
+            self.lineEdit_smtp_server_port.editingFinished.disconnect(self.server_save)
+            self.lineEdit_iridium_server_mail.editingFinished.disconnect(self.server_save)
+            self.dateTimeEdit_last_sync.dateTimeChanged.disconnect(self.server_save)
+            self.comboBox_config_email.currentIndexChanged.disconnect(self.select_server)
+
+
+    def server_save(self):
         email = self.lineEdit_email.text()
         password = self.lineEdit_password.text()
         server_imap_ip = self.lineEdit_imap_server_ip.text()
@@ -177,28 +203,31 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         server_smtp_port = self.lineEdit_smtp_server_port.text()
         iridium_mail = self.lineEdit_iridium_server_mail.text()
         t_zero = self.dateTimeEdit_last_sync.dateTime().toString(Qt.ISODate)
-        self.db.save_server(email, password, server_imap_ip, server_imap_port, server_smtp_ip, server_smtp_port, iridium_mail, t_zero, self.comboBox_config_email.currentData())
-        self.update_server_list()
+        id=None
+        if(self.comboBox_config_email.currentIndex()==-1):
+            id = self.db.new_server(email, password, server_imap_ip, server_imap_port, server_smtp_ip, server_smtp_port, iridium_mail, t_zero)
+        else:
+            self.db.save_server(email, password, server_imap_ip, server_imap_port, server_smtp_ip, server_smtp_port, iridium_mail, t_zero, self.comboBox_config_email.currentData())
+        self.update_server_list(id)
         return True
 
     def server_new(self, event):
-        email = self.lineEdit_email.text()
-        password = self.lineEdit_password.text()
-        server_imap_ip = self.lineEdit_imap_server_ip.text()
-        server_imap_port = self.lineEdit_imap_server_port.text()
-        server_smtp_ip = self.lineEdit_smtp_server_ip.text()
-        server_smtp_port = self.lineEdit_smtp_server_port.text()
-        iridium_mail = self.lineEdit_iridium_server_mail.text()
-        t_zero = self.dateTimeEdit_last_sync.dateTime().toString(Qt.ISODate)
-        self.db.new_server(email, password, server_imap_ip, server_imap_port, server_smtp_ip, server_smtp_port, iridium_mail, t_zero)
-        self.update_server_list()
-        return True
+        self.enable_slot_server_edit(False)
+        self.comboBox_config_email.setCurrentIndex(-1)
+        self.lineEdit_email.clear()
+        self.lineEdit_password.clear()
+        self.lineEdit_imap_server_ip.clear()
+        self.lineEdit_imap_server_port.clear()
+        self.lineEdit_smtp_server_ip.clear()
+        self.lineEdit_smtp_server_port.clear()
+        self.lineEdit_iridium_server_mail.clear()
+        self.enable_slot_server_edit(True)
 
     def server_delete(self, event):
         id_config = self.comboBox_config_email.currentData()
         msgBox = QMessageBox()
         msgBox.setIcon(QMessageBox.Question)
-        msgBox.setText("Are you sure you want to delete email account "+str(id_config))
+        msgBox.setText("Are you sure you want to delete email account "+ self.comboBox_config_email.currentText())
         msgBox.setWindowTitle("Seabot")
         msgBox.setStandardButtons(QMessageBox.Cancel | QMessageBox.Ok)
         msgBox.setDefaultButton(QMessageBox.Cancel)
@@ -209,13 +238,26 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.update_server_list()
         return True
 
-    def update_server_list(self):
+    def update_server_list(self, config_id = None):
+        current_index = self.comboBox_config_email.currentIndex()
         self.comboBox_config_email.clear()
         email_list = self.db.get_email_list()
+        if(len(email_list)==0):
+            return
+
+        index_list = []
         for email in email_list:
             self.comboBox_config_email.addItem(str(email["config_id"]) + " - " + email["email"], email["config_id"])
+            index_list.append(email["config_id"])
+
+        if(config_id != None):
+            current_index = index_list.index(config_id)
+        if(current_index==-1):
+            current_index=index_list.index(email_list[0]["config_id"])
+        self.comboBox_config_email.setCurrentIndex(current_index)
 
     def update_robots_list(self, index_comboBox=-1):
+        currentIndex = self.comboBox_state_imei.currentIndex()
         self.comboBox_state_imei.clear()
         robot_list = self.db.get_robot_list()
         if(len(robot_list)==0):
@@ -228,7 +270,14 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 self.comboBox_state_imei.addItem(str(robot["imei"]), robot["imei"])
 
         if index_comboBox==-1:
-            self.comboBox_state_imei.setCurrentIndex(len(robot_list)-1)
+            if(currentIndex==-1):
+                self.comboBox_state_imei.setCurrentIndex(0)
+            else:
+                nb_elem = self.comboBox_state_imei.count()
+                if(currentIndex>=nb_elem):
+                    self.comboBox_state_imei.setCurrentIndex(nb_elem-1)
+                else:
+                    self.comboBox_state_imei.setCurrentIndex(currentIndex)
         else:
             self.comboBox_state_imei.setCurrentIndex(index_comboBox)
 
@@ -255,6 +304,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         if index != -1:
             server_id = self.comboBox_config_email.currentData()
             server_data = self.db.get_server_data(server_id)
+            self.enable_slot_server_edit(False)
             self.lineEdit_email.setText(str(server_data["email"]))
             self.lineEdit_password.setText(str(server_data["password"]))
             self.lineEdit_imap_server_ip.setText(str(server_data["server_imap_ip"]))
@@ -263,6 +313,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.lineEdit_smtp_server_port.setText(str(server_data["server_smtp_port"]))
             self.lineEdit_iridium_server_mail.setText(str(server_data["iridium_server_mail"]))
             self.dateTimeEdit_last_sync.setDateTime(server_data["last_sync"])
+            self.enable_slot_server_edit(True)
 
     def open_mission(self, event):
         #options = QFileDialog.Options()
@@ -288,7 +339,6 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             # print(self.layerMissions)
             self.mission_selected = self.listWidget_mission.currentRow()
 
-
     def closeEvent(self, event):
         self.timer_seabot.stop()
         self.timer_boat.stop()
@@ -308,7 +358,6 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.lineEdit_smtp_server_ip.setEnabled(True)
             self.lineEdit_smtp_server_port.setEnabled(True)
             self.lineEdit_iridium_server_mail.setEnabled(True)
-            self.pushButton_server_save.setEnabled(True)
             self.pushButton_server_new.setEnabled(True)
             self.pushButton_server_delete.setEnabled(True)
             self.dateTimeEdit_last_sync.setEnabled(True)
@@ -325,7 +374,6 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.lineEdit_smtp_server_ip.setEnabled(False)
             self.lineEdit_smtp_server_port.setEnabled(False)
             self.lineEdit_iridium_server_mail.setEnabled(False)
-            self.pushButton_server_save.setEnabled(False)
             self.pushButton_server_new.setEnabled(False)
             self.pushButton_server_delete.setEnabled(False)
             self.dateTimeEdit_last_sync.setEnabled(False)
@@ -456,22 +504,55 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 self.update_state_info()
                 self.fill_treeWidget_log_state()
 
-    def errase_log_robot(self):
+    def errase_com(self):
         if(self.comboBox_state_imei.currentIndex() != -1):
             msgBox = QMessageBox()
             msgBox.setIcon(QMessageBox.Question)
-            msgBox.setText("Are you sure you want to delete log of "+str(self.comboBox_state_imei.currentData()))
+            msgBox.setText("Are you sure you want to delete com of "+str(self.comboBox_state_imei.currentText()))
             msgBox.setWindowTitle("Seabot")
             msgBox.setStandardButtons(QMessageBox.Cancel | QMessageBox.Ok)
             msgBox.setDefaultButton(QMessageBox.Cancel)
             ret = msgBox.exec()
             if(ret!=QMessageBox.Ok):
                 return False
-            currentIndex = self.comboBox_state_imei.currentIndex()
+            self.db.errase_com(self.comboBox_state_imei.currentData())
+            self.update_treeWidget_sbd_sent()
+
+    def errase_log_robot(self):
+        if(self.comboBox_state_imei.currentIndex() != -1):
+            msgBox = QMessageBox()
+            msgBox.setIcon(QMessageBox.Question)
+            msgBox.setText("Are you sure you want to delete log of "+str(self.comboBox_state_imei.currentText()))
+            msgBox.setWindowTitle("Seabot")
+            msgBox.setStandardButtons(QMessageBox.Cancel | QMessageBox.Ok)
+            msgBox.setDefaultButton(QMessageBox.Cancel)
+            ret = msgBox.exec()
+            if(ret!=QMessageBox.Ok):
+                return False
             self.db.errase_log(self.comboBox_state_imei.currentData())
             self.data_log = None
             self.update_state_info()
             self.fill_treeWidget_log_state()
+
+    def errase_robot(self):
+        if(self.comboBox_state_imei.currentIndex() != -1):
+            msgBox = QMessageBox()
+            msgBox.setIcon(QMessageBox.Question)
+            msgBox.setText("Are you sure you want to delete robot "+str(self.comboBox_state_imei.currentText()))
+            msgBox.setWindowTitle("Seabot")
+            msgBox.setStandardButtons(QMessageBox.Cancel | QMessageBox.Ok)
+            msgBox.setDefaultButton(QMessageBox.Cancel)
+            ret = msgBox.exec()
+            if(ret!=QMessageBox.Ok):
+                return False
+            self.db.errase_log(self.comboBox_state_imei.currentData())
+            self.db.errase_robot(self.comboBox_state_imei.currentData())
+            del self.layerSeabots[self.comboBox_state_imei.currentData()]
+            self.data_log = None
+            self.update_robots_list()
+            self.update_state_info()
+            self.fill_treeWidget_log_state()
+
 
     def last_log_state(self):
         self.data_log, self.momsn_current = self.db.get_last_log_state(self.comboBox_state_imei.currentData())
@@ -789,3 +870,42 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.label_com_mission_tstart.setText(str(self.mission_iridium_com.start_time_utc))
             self.label_com_mission_tend.setText(str(self.mission_iridium_com.end_time))
             self.pushButton_test_send_mission.setEnabled(True)
+
+    def test_decode_log(self):
+        filename, _ = QFileDialog.getOpenFileName(self,"Select a sbd file to decode", "","Iridium SBD File (*.sbd)")
+        imp = IridiumMessageParser()
+        f = open(filename, 'rb')
+        message_string = f.read()
+        print("length = ", len(message_string))
+        f.close()
+        data = int.from_bytes(message_string, byteorder='little', signed=False)
+        fields = imp.deserialize_log_state(data, datetime.datetime.utcnow().timestamp())
+        text = ""
+        text += "east = " + str(fields["east"]) + "\n"
+        text += "north = " + str(fields["north"]) + "\n"
+        text += "gnss_speed = " + str(fields["gnss_speed"]) + "\n"
+        text += "gnss_heading = " + str(fields["gnss_heading"]) + "\n"
+        text += "safety_published_frequency = " + str(fields["safety_published_frequency"]) + "\n"
+        text += "safety_depth_limit = " + str(fields["safety_depth_limit"]) + "\n"
+        text += "safety_batteries_limit = " + str(fields["safety_batteries_limit"]) + "\n"
+        text += "safety_depressurization = " + str(fields["safety_depressurization"]) + "\n"
+        text += "enable_mission = " + str(fields["enable_mission"]) + "\n"
+        text += "enable_depth = " + str(fields["enable_depth"]) + "\n"
+        text += "enable_engine = " + str(fields["enable_engine"]) + "\n"
+        text += "enable_flash = " + str(fields["enable_flash"]) + "\n"
+        text += "battery0 = " + str(fields["battery0"]) + "\n"
+        text += "battery1 = " + str(fields["battery1"]) + "\n"
+        text += "battery2 = " + str(fields["battery2"]) + "\n"
+        text += "battery3 = " + str(fields["battery3"]) + "\n"
+        text += "pressure = " + str(fields["pressure"]) + "\n"
+        text += "temperature = " + str(fields["temperature"]) + "\n"
+        text += "humidity = " + str(fields["humidity"]) + "\n"
+        text += "waypoint = " + str(fields["waypoint"]) + "\n"
+        text += "last_cmd_received = " + str(fields["last_cmd_received"]) + "\n"
+
+        msgBox = QMessageBox()
+        msgBox.setIcon(QMessageBox.Question)
+        msgBox.setText(text)
+        msgBox.setWindowTitle("Seabot SBD Log decode")
+        msgBox.setStandardButtons(QMessageBox.Ok)
+        msgBox.exec()
