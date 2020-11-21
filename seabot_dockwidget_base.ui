@@ -100,23 +100,6 @@
         <string>Config</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_5">
-        <item row="13" column="0" colspan="2">
-         <widget class="QLineEdit" name="lineEdit_imap_server_port">
-          <property name="placeholderText">
-           <string>IMAP Server Port</string>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="0" colspan="2">
-         <widget class="QCheckBox" name="checkBox_gnss_delete">
-          <property name="text">
-           <string>Delete trajectory on exit</string>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
         <item row="18" column="0" colspan="2">
          <widget class="QLineEdit" name="lineEdit_iridium_server_mail">
           <property name="sizePolicy">
@@ -127,6 +110,133 @@
           </property>
           <property name="placeholderText">
            <string>Iridium server email</string>
+          </property>
+          <property name="clearButtonEnabled">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="25" column="0" colspan="2">
+         <widget class="QLabel" name="label_server_log">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Disconnected</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="23" column="1">
+         <widget class="QPushButton" name="pushButton_server_new">
+          <property name="text">
+           <string>New account</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0" colspan="2">
+         <widget class="QCheckBox" name="checkBox_gnss_distance">
+          <property name="text">
+           <string>Show Distance and Heading to Seabot</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QPushButton" name="pushButton_boat">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Enable Boat Position</string>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="0" colspan="2">
+         <widget class="QComboBox" name="comboBox_config_email"/>
+        </item>
+        <item row="6" column="0" colspan="2">
+         <widget class="QLabel" name="label">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Email account</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+          <property name="buddy">
+           <cstring>label</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="10" column="0" colspan="2">
+         <widget class="QLineEdit" name="lineEdit_email">
+          <property name="toolTip">
+           <string/>
+          </property>
+          <property name="statusTip">
+           <string/>
+          </property>
+          <property name="whatsThis">
+           <string/>
+          </property>
+          <property name="accessibleName">
+           <string/>
+          </property>
+          <property name="accessibleDescription">
+           <string/>
+          </property>
+          <property name="autoFillBackground">
+           <bool>false</bool>
+          </property>
+          <property name="styleSheet">
+           <string notr="true"/>
+          </property>
+          <property name="inputMethodHints">
+           <set>Qt::ImhEmailCharactersOnly</set>
+          </property>
+          <property name="inputMask">
+           <string/>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="frame">
+           <bool>true</bool>
+          </property>
+          <property name="placeholderText">
+           <string>email</string>
+          </property>
+          <property name="clearButtonEnabled">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0" colspan="2">
+         <widget class="QCheckBox" name="checkBox_gnss_delete">
+          <property name="text">
+           <string>Delete trajectory on exit</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
@@ -151,55 +261,36 @@
           </property>
          </widget>
         </item>
-        <item row="11" column="0" colspan="2">
-         <widget class="QLineEdit" name="lineEdit_password">
-          <property name="inputMethodHints">
-           <set>Qt::ImhHiddenText|Qt::ImhNoAutoUppercase|Qt::ImhNoPredictiveText|Qt::ImhSensitiveData</set>
+        <item row="20" column="0" colspan="2">
+         <widget class="QDateTimeEdit" name="dateTimeEdit_last_sync">
+          <property name="dateTime">
+           <datetime>
+            <hour>1</hour>
+            <minute>0</minute>
+            <second>0</second>
+            <year>2018</year>
+            <month>12</month>
+            <day>31</day>
+           </datetime>
           </property>
-          <property name="echoMode">
-           <enum>QLineEdit::Password</enum>
+          <property name="minimumDateTime">
+           <datetime>
+            <hour>23</hour>
+            <minute>0</minute>
+            <second>0</second>
+            <year>2014</year>
+            <month>12</month>
+            <day>30</day>
+           </datetime>
           </property>
-          <property name="placeholderText">
-           <string>password</string>
+          <property name="displayFormat">
+           <string notr="true">dd/MM/yyyy HH:mm:ss</string>
           </property>
-          <property name="clearButtonEnabled">
-           <bool>false</bool>
+          <property name="calendarPopup">
+           <bool>true</bool>
           </property>
-         </widget>
-        </item>
-        <item row="15" column="0" colspan="2">
-         <widget class="QLineEdit" name="lineEdit_smtp_server_ip">
-          <property name="placeholderText">
-           <string>SMTP Server IP</string>
-          </property>
-         </widget>
-        </item>
-        <item row="19" column="0" colspan="2">
-         <widget class="QLabel" name="label_22">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>Synchronisation from</string>
-          </property>
-         </widget>
-        </item>
-        <item row="25" column="0" colspan="2">
-         <widget class="QLabel" name="label_server_log">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>Disconnected</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
+          <property name="timeSpec">
+           <enum>Qt::UTC</enum>
           </property>
          </widget>
         </item>
@@ -208,157 +299,7 @@
           <property name="placeholderText">
            <string>IMAP Server IP</string>
           </property>
-         </widget>
-        </item>
-        <item row="5" column="0" colspan="2">
-         <widget class="Line" name="line_2">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-         </widget>
-        </item>
-        <item row="6" column="0" colspan="2">
-         <widget class="QLabel" name="label">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>Email account</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-          <property name="buddy">
-           <cstring>label</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1">
-         <widget class="QSpinBox" name="spinBox_gnss_trace">
-          <property name="suffix">
-           <string/>
-          </property>
-          <property name="minimum">
-           <number>-1</number>
-          </property>
-          <property name="maximum">
-           <number>300</number>
-          </property>
-          <property name="singleStep">
-           <number>15</number>
-          </property>
-          <property name="value">
-           <number>15</number>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="0" colspan="2">
-         <widget class="QCheckBox" name="checkBox_gnss_lock">
-          <property name="enabled">
-           <bool>true</bool>
-          </property>
-          <property name="text">
-           <string>Lock Boat Position</string>
-          </property>
-          <property name="checked">
-           <bool>false</bool>
-          </property>
-          <property name="tristate">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="26" column="0" colspan="2">
-         <widget class="QProgressBar" name="progressBar_imap_next_connection">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="minimum">
-           <number>0</number>
-          </property>
-          <property name="maximum">
-           <number>5</number>
-          </property>
-          <property name="value">
-           <number>0</number>
-          </property>
-          <property name="textVisible">
-           <bool>true</bool>
-          </property>
-          <property name="invertedAppearance">
-           <bool>false</bool>
-          </property>
-          <property name="format">
-           <string>%v s</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0" colspan="2">
-         <widget class="QCheckBox" name="checkBox_gnss_distance">
-          <property name="text">
-           <string>Show Distance and Heading to Seabot</string>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="10" column="0" colspan="2">
-         <widget class="QLineEdit" name="lineEdit_email">
-          <property name="toolTip">
-           <string/>
-          </property>
-          <property name="statusTip">
-           <string/>
-          </property>
-          <property name="whatsThis">
-           <string/>
-          </property>
-          <property name="accessibleName">
-           <string/>
-          </property>
-          <property name="accessibleDescription">
-           <string/>
-          </property>
-          <property name="inputMethodHints">
-           <set>Qt::ImhEmailCharactersOnly</set>
-          </property>
-          <property name="inputMask">
-           <string/>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-          <property name="frame">
-           <bool>true</bool>
-          </property>
-          <property name="placeholderText">
-           <string>email</string>
-          </property>
-         </widget>
-        </item>
-        <item row="16" column="0" colspan="2">
-         <widget class="QLineEdit" name="lineEdit_smtp_server_port">
-          <property name="placeholderText">
-           <string>SMTP Server Port</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QPushButton" name="pushButton_boat">
-          <property name="minimumSize">
-           <size>
-            <width>100</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>Enable Boat Position</string>
-          </property>
-          <property name="checkable">
+          <property name="clearButtonEnabled">
            <bool>true</bool>
           </property>
          </widget>
@@ -391,39 +332,141 @@
           </property>
          </widget>
         </item>
-        <item row="8" column="0" colspan="2">
-         <widget class="QComboBox" name="comboBox_config_email"/>
+        <item row="5" column="0" colspan="2">
+         <widget class="Line" name="line_email_account">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
         </item>
-        <item row="20" column="0" colspan="2">
-         <widget class="QDateTimeEdit" name="dateTimeEdit_last_sync">
-          <property name="dateTime">
-           <datetime>
-            <hour>2</hour>
-            <minute>0</minute>
-            <second>0</second>
-            <year>2018</year>
-            <month>12</month>
-            <day>31</day>
-           </datetime>
+        <item row="13" column="0" colspan="2">
+         <widget class="QLineEdit" name="lineEdit_imap_server_port">
+          <property name="placeholderText">
+           <string>IMAP Server Port</string>
           </property>
-          <property name="minimumDateTime">
-           <datetime>
-            <hour>0</hour>
-            <minute>0</minute>
-            <second>0</second>
-            <year>2014</year>
-            <month>12</month>
-            <day>31</day>
-           </datetime>
-          </property>
-          <property name="displayFormat">
-           <string notr="true">dd/MM/yyyy HH:mm:ss</string>
-          </property>
-          <property name="calendarPopup">
+          <property name="clearButtonEnabled">
            <bool>true</bool>
           </property>
-          <property name="timeSpec">
-           <enum>Qt::UTC</enum>
+         </widget>
+        </item>
+        <item row="15" column="0" colspan="2">
+         <widget class="QLineEdit" name="lineEdit_smtp_server_ip">
+          <property name="placeholderText">
+           <string>SMTP Server IP</string>
+          </property>
+          <property name="clearButtonEnabled">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QSpinBox" name="spinBox_gnss_trace">
+          <property name="suffix">
+           <string/>
+          </property>
+          <property name="minimum">
+           <number>-1</number>
+          </property>
+          <property name="maximum">
+           <number>300</number>
+          </property>
+          <property name="singleStep">
+           <number>15</number>
+          </property>
+          <property name="value">
+           <number>15</number>
+          </property>
+         </widget>
+        </item>
+        <item row="19" column="0" colspan="2">
+         <widget class="QLabel" name="label_22">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Synchronisation from</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0" colspan="2">
+         <widget class="QCheckBox" name="checkBox_gnss_lock">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="text">
+           <string>Lock Boat Position</string>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+          <property name="tristate">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="16" column="0" colspan="2">
+         <widget class="QLineEdit" name="lineEdit_smtp_server_port">
+          <property name="placeholderText">
+           <string>SMTP Server Port</string>
+          </property>
+          <property name="clearButtonEnabled">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="11" column="0" colspan="2">
+         <widget class="QLineEdit" name="lineEdit_password">
+          <property name="inputMethodHints">
+           <set>Qt::ImhNoAutoUppercase|Qt::ImhNoPredictiveText|Qt::ImhSensitiveData</set>
+          </property>
+          <property name="echoMode">
+           <enum>QLineEdit::PasswordEchoOnEdit</enum>
+          </property>
+          <property name="placeholderText">
+           <string>password</string>
+          </property>
+          <property name="clearButtonEnabled">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="26" column="0" colspan="2">
+         <widget class="QProgressBar" name="progressBar_imap_next_connection">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="minimum">
+           <number>0</number>
+          </property>
+          <property name="maximum">
+           <number>5</number>
+          </property>
+          <property name="value">
+           <number>0</number>
+          </property>
+          <property name="textVisible">
+           <bool>true</bool>
+          </property>
+          <property name="invertedAppearance">
+           <bool>false</bool>
+          </property>
+          <property name="format">
+           <string>%v s</string>
           </property>
          </widget>
         </item>
@@ -431,13 +474,6 @@
          <widget class="QPushButton" name="pushButton_server_delete">
           <property name="text">
            <string>Delete account</string>
-          </property>
-         </widget>
-        </item>
-        <item row="23" column="1">
-         <widget class="QPushButton" name="pushButton_server_new">
-          <property name="text">
-           <string>New account</string>
           </property>
          </widget>
         </item>
@@ -774,7 +810,7 @@
              <widget class="QDateTimeEdit" name="dateTimeEdit_state_view_start">
               <property name="dateTime">
                <datetime>
-                <hour>4</hour>
+                <hour>3</hour>
                 <minute>0</minute>
                 <second>0</second>
                 <year>2018</year>
@@ -784,7 +820,7 @@
               </property>
               <property name="minimumDateTime">
                <datetime>
-                <hour>15</hour>
+                <hour>14</hour>
                 <minute>0</minute>
                 <second>0</second>
                 <year>2014</year>
@@ -821,7 +857,7 @@
              <widget class="QDateTimeEdit" name="dateTimeEdit_state_view_end">
               <property name="dateTime">
                <datetime>
-                <hour>4</hour>
+                <hour>3</hour>
                 <minute>0</minute>
                 <second>0</second>
                 <year>2050</year>
@@ -831,7 +867,7 @@
               </property>
               <property name="minimumDateTime">
                <datetime>
-                <hour>15</hour>
+                <hour>14</hour>
                 <minute>0</minute>
                 <second>0</second>
                 <year>2014</year>

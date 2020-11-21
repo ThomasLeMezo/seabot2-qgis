@@ -51,6 +51,9 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     imap_signal_stop_server = pyqtSignal()
 
+    color_stylesheet_green = '''background-color: green;'''
+    color_stylesheet_red = '''background-color: red;'''
+
     def __init__(self, iface, parent=None):
         """Constructor."""
         super(SeabotDockWidget, self).__init__(parent)
@@ -125,6 +128,14 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.checkBox_gnss_distance.stateChanged.connect(self.update_gnss_seabot_pose)
         self.checkBox_gnss_delete.stateChanged.connect(self.update_gnss_delete)
 
+        self.lineEdit_email.textEdited.connect(self.server_data_changed)
+        self.lineEdit_password.textEdited.connect(self.server_data_changed)
+        self.lineEdit_imap_server_ip.textEdited.connect(self.server_data_changed)
+        self.lineEdit_imap_server_port.textEdited.connect(self.server_data_changed)
+        self.lineEdit_smtp_server_ip.textEdited.connect(self.server_data_changed)
+        self.lineEdit_smtp_server_port.textEdited.connect(self.server_data_changed)
+        self.lineEdit_iridium_server_mail.textEdited.connect(self.server_data_changed)
+
         self.enable_slot_server_edit()
 
         # Mission tab
@@ -193,6 +204,11 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.dateTimeEdit_last_sync.dateTimeChanged.disconnect(self.server_save)
             self.comboBox_config_email.currentIndexChanged.disconnect(self.select_server)
 
+    def server_set_color_data(self, stylesheet):
+        self.line_email_account.setStyleSheet(stylesheet)
+
+    def server_data_changed(self):
+        self.server_set_color_data(self.color_stylesheet_red)
 
     def server_save(self):
         email = self.lineEdit_email.text()
@@ -209,6 +225,8 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         else:
             self.db.save_server(email, password, server_imap_ip, server_imap_port, server_smtp_ip, server_smtp_port, iridium_mail, t_zero, self.comboBox_config_email.currentData())
         self.update_server_list(id)
+        self.server_set_color_data(self.color_stylesheet_green)
+
         return True
 
     def server_new(self, event):
