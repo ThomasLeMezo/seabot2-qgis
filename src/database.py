@@ -249,9 +249,9 @@ class DataBaseConnection():
 			if(row[0]==0):
 				self.sqliteCursor.execute("INSERT INTO ROBOTS (IMEI) VALUES (?)", [imei])
 				self.sqliteConnection.commit()
-				return False
-			else:
 				return True
+			else:
+				return False
 		except sqlite3.Error as error:
 			print("Error while connecting to sqlite", error)
 

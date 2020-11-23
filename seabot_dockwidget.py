@@ -22,7 +22,7 @@
  ***************************************************************************/
 """
 
-import os, time, math
+import os, time, math, ntpath
 
 from PyQt5 import QtGui, QtWidgets, uic
 from PyQt5.QtCore import pyqtSignal, QTimer, QFile, QFileInfo
@@ -441,7 +441,7 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.add_item_treeWidget("battery3", nb_digit=2)
             self.add_item_treeWidget("pressure", nb_digit=0)
             self.add_item_treeWidget("temperature", nb_digit=1)
-            self.add_item_treeWidget("humidity", nb_digit=2, warning=(self.data_log["humidity"]>50.0))
+            self.add_item_treeWidget("humidity", nb_digit=2, warning=(self.data_log["humidity"]>70.0))
             self.add_item_treeWidget("waypoint", nb_digit=0)
             self.add_item_treeWidget("last_cmd_received")
             self.treeWidget_iridium.resizeColumnToContents(0)
@@ -890,40 +890,53 @@ class SeabotDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.pushButton_test_send_mission.setEnabled(True)
 
     def test_decode_log(self):
-        filename, _ = QFileDialog.getOpenFileName(self,"Select a sbd file to decode", "","Iridium SBD File (*.sbd)")
+        filepath, _ = QFileDialog.getOpenFileName(self,"Select a sbd file to decode", "","Iridium SBD File (*.sbd)")
         imp = IridiumMessageParser()
-        f = open(filename, 'rb')
+        f = open(filepath, 'rb')
         message_string = f.read()
         print("length = ", len(message_string))
         f.close()
         data = int.from_bytes(message_string, byteorder='little', signed=False)
-        fields = imp.deserialize_log_state(data, datetime.datetime.utcnow().timestamp())
+        message_data = imp.deserialize_log_state(data, datetime.datetime.utcnow().timestamp())
         text = ""
-        text += "east = " + str(fields["east"]) + "\n"
-        text += "north = " + str(fields["north"]) + "\n"
-        text += "gnss_speed = " + str(fields["gnss_speed"]) + "\n"
-        text += "gnss_heading = " + str(fields["gnss_heading"]) + "\n"
-        text += "safety_published_frequency = " + str(fields["safety_published_frequency"]) + "\n"
-        text += "safety_depth_limit = " + str(fields["safety_depth_limit"]) + "\n"
-        text += "safety_batteries_limit = " + str(fields["safety_batteries_limit"]) + "\n"
-        text += "safety_depressurization = " + str(fields["safety_depressurization"]) + "\n"
-        text += "enable_mission = " + str(fields["enable_mission"]) + "\n"
-        text += "enable_depth = " + str(fields["enable_depth"]) + "\n"
-        text += "enable_engine = " + str(fields["enable_engine"]) + "\n"
-        text += "enable_flash = " + str(fields["enable_flash"]) + "\n"
-        text += "battery0 = " + str(fields["battery0"]) + "\n"
-        text += "battery1 = " + str(fields["battery1"]) + "\n"
-        text += "battery2 = " + str(fields["battery2"]) + "\n"
-        text += "battery3 = " + str(fields["battery3"]) + "\n"
-        text += "pressure = " + str(fields["pressure"]) + "\n"
-        text += "temperature = " + str(fields["temperature"]) + "\n"
-        text += "humidity = " + str(fields["humidity"]) + "\n"
-        text += "waypoint = " + str(fields["waypoint"]) + "\n"
-        text += "last_cmd_received = " + str(fields["last_cmd_received"]) + "\n"
+        text += "east = " + str(message_data["east"]) + "\n"
+        text += "north = " + str(message_data["north"]) + "\n"
+        text += "gnss_speed = " + str(message_data["gnss_speed"]) + "\n"
+        text += "gnss_heading = " + str(message_data["gnss_heading"]) + "\n"
+        text += "safety_published_frequency = " + str(message_data["safety_published_frequency"]) + "\n"
+        text += "safety_depth_limit = " + str(message_data["safety_depth_limit"]) + "\n"
+        text += "safety_batteries_limit = " + str(message_data["safety_batteries_limit"]) + "\n"
+        text += "safety_depressurization = " + str(message_data["safety_depressurization"]) + "\n"
+        text += "enable_mission = " + str(message_data["enable_mission"]) + "\n"
+        text += "enable_depth = " + str(message_data["enable_depth"]) + "\n"
+        text += "enable_engine = " + str(message_data["enable_engine"]) + "\n"
+        text += "enable_flash = " + str(message_data["enable_flash"]) + "\n"
+        text += "battery0 = " + str(message_data["battery0"]) + "\n"
+        text += "battery1 = " + str(message_data["battery1"]) + "\n"
+        text += "battery2 = " + str(message_data["battery2"]) + "\n"
+        text += "battery3 = " + str(message_data["battery3"]) + "\n"
+        text += "pressure = " + str(message_data["pressure"]) + "\n"
+        text += "temperature = " + str(message_data["temperature"]) + "\n"
+        text += "humidity = " + str(message_data["humidity"]) + "\n"
+        text += "waypoint = " + str(message_data["waypoint"]) + "\n"
+        text += "last_cmd_received = " + str(message_data["last_cmd_received"]) + "\n"
 
         msgBox = QMessageBox()
         msgBox.setIcon(QMessageBox.Question)
         msgBox.setText(text)
         msgBox.setWindowTitle("Seabot SBD Log decode")
-        msgBox.setStandardButtons(QMessageBox.Ok)
-        msgBox.exec()
+        msgBox.setStandardButtons(QMessageBox.Ok | QMessageBox.Save)
+        ret = msgBox.exec()
+
+        if(ret==QMessageBox.Save):
+            filename = ntpath.basename(filepath)
+            re_data = re.search("(.*)_(.*).sbd", filename)
+            imei = re_data.group(1)
+            momsn = int(re_data.group(2))
+            print("filename = ", filename, "imei = ", imei, "momsn = ", momsn)
+            is_new_robot = self.db.add_new_robot(imei)
+            message_id = self.db.add_sbd_received(imei, momsn, 0, datetime.datetime.utcnow())
+            self.db.add_sbd_log_state(message_id, message_data)
+
+            if(is_new_robot):
+                self.update_robots_list()

@@ -265,7 +265,7 @@
          <widget class="QDateTimeEdit" name="dateTimeEdit_last_sync">
           <property name="dateTime">
            <datetime>
-            <hour>1</hour>
+            <hour>0</hour>
             <minute>0</minute>
             <second>0</second>
             <year>2018</year>
@@ -275,7 +275,7 @@
           </property>
           <property name="minimumDateTime">
            <datetime>
-            <hour>23</hour>
+            <hour>22</hour>
             <minute>0</minute>
             <second>0</second>
             <year>2014</year>
@@ -810,7 +810,7 @@
              <widget class="QDateTimeEdit" name="dateTimeEdit_state_view_start">
               <property name="dateTime">
                <datetime>
-                <hour>3</hour>
+                <hour>2</hour>
                 <minute>0</minute>
                 <second>0</second>
                 <year>2018</year>
@@ -820,7 +820,7 @@
               </property>
               <property name="minimumDateTime">
                <datetime>
-                <hour>14</hour>
+                <hour>13</hour>
                 <minute>0</minute>
                 <second>0</second>
                 <year>2014</year>
@@ -857,7 +857,7 @@
              <widget class="QDateTimeEdit" name="dateTimeEdit_state_view_end">
               <property name="dateTime">
                <datetime>
-                <hour>3</hour>
+                <hour>2</hour>
                 <minute>0</minute>
                 <second>0</second>
                 <year>2050</year>
@@ -867,7 +867,7 @@
               </property>
               <property name="minimumDateTime">
                <datetime>
-                <hour>14</hour>
+                <hour>13</hour>
                 <minute>0</minute>
                 <second>0</second>
                 <year>2014</year>
@@ -1401,7 +1401,7 @@
                </palette>
               </property>
               <property name="text">
-               <string>Test Decode Log</string>
+               <string>Read Log SBD Message</string>
               </property>
              </widget>
             </item>
